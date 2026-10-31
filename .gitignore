@@ -1,0 +1,15 @@
+# Operating System Artifacts
+.DS_Store
+*.DS_Store
+Thumbs.db
+
+# Backup folders
+*.git_backup
+.git_backup
+
+# Node Dependencies
+node_modules/
+Game 3./node_modules/
+
+# Local Environment Overrides
+.env.local

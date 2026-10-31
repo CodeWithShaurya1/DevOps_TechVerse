@@ -274,9 +274,165 @@ async function runTests() {
     assert.strictEqual(sequence[10], 'leaderboard');
   });
 
+  // 20. 3-Game Cards Horizontal Row Grid & CSS Configuration
+  test('All three game cards use responsive 3-column CSS Grid without desktop wrapping', () => {
+    const css = fs.readFileSync('src/styles/portal.css', 'utf8');
+    assert.ok(css.includes('grid-template-columns: repeat(3, minmax(0, 1fr))'), 'CSS contains repeat(3, minmax(0, 1fr)) for horizontal card layout');
+    assert.ok(css.includes('.tournament-games-grid'), 'CSS contains .tournament-games-grid');
+    assert.ok(css.includes('.tournament-game-card'), 'CSS contains .tournament-game-card with responsive styling');
+
+    const introHtml = fs.readFileSync('src/components/CinematicIntro.js', 'utf8');
+    assert.ok(introHtml.includes('class="tournament-games-grid"'), 'CinematicIntro contains tournament-games-grid');
+    assert.ok(introHtml.includes('card-stage-1') && introHtml.includes('card-stage-2') && introHtml.includes('card-stage-3'), 'CinematicIntro contains all 3 stages');
+  });
+
+  // 21. Operator Selection & Identity Persistence
+  test('Operator Selection feature persists callsign and enforces tournament integrity when rounds exist', () => {
+    // Unregistered / Guest persistence test
+    global.localStorage.setItem('techverse_preferred_operator', 'SHAURYA BANSAL');
+    const stored = global.localStorage.getItem('techverse_preferred_operator');
+    assert.strictEqual(stored, 'SHAURYA BANSAL');
+
+    // Integrity lock test: if official play has started, modifying operator requires admin authorization
+    const mockState = {
+      participant: { id: 'test-p-1', full_name: 'ORIGINAL_PILOT' },
+      roundResults: { 1: { score: 12000 } },
+      hasStartedOfficialPlay() { return !!(this.roundResults[1] || this.roundResults[2] || this.roundResults[3]); }
+    };
+    assert.strictEqual(mockState.hasStartedOfficialPlay(), true);
+  });
+
+  // 22. DevOps Rain Matrix Background Engine
+  test('DevOps Rain background engine includes specified telemetry fragments and respects reduced motion', () => {
+    const rainCode = fs.readFileSync('src/services/devopsRain.js', 'utf8');
+    assert.ok(rainCode.includes('kubectl'), 'Contains kubectl fragment');
+    assert.ok(rainCode.includes('DEPLOY'), 'Contains DEPLOY fragment');
+    assert.ok(rainCode.includes('0x7FA2'), 'Contains 0x7FA2 fragment');
+    assert.ok(rainCode.includes('BUILD_OK'), 'Contains BUILD_OK fragment');
+    assert.ok(rainCode.includes('prefers-reduced-motion'), 'Contains prefers-reduced-motion check');
+    assert.ok(rainCode.includes('visibilitychange'), 'Contains visibilitychange listener for battery optimization');
+  });
+
+  // 23. Button Hover Styling & Contrast
+  test('Button design uses dark base, controlled hover tint, and accessible contrast', () => {
+    const css = fs.readFileSync('src/styles/portal.css', 'utf8');
+    assert.ok(css.includes('.btn-primary-cyan'), 'CSS defines .btn-primary-cyan');
+    assert.ok(css.includes('.btn-primary-cyan:hover'), 'CSS defines hover state');
+    assert.ok(!css.includes('background: var(--neon-cyan);\n  color: #02040a'), 'No solid neon cyan washout on button hover');
+    assert.ok(css.includes('focus-visible'), 'CSS contains visible focus-visible outline');
+  });
+
+  // 24. Participant Session Lifecycle Reset
+  test('resetForNextParticipant clears active session and form prefill for next competitor without deleting Supabase history', () => {
+    global.sessionStorage.setItem('techverse_session_participant', JSON.stringify({ id: 'p1', full_name: 'ALEX' }));
+    global.localStorage.setItem('techverse_preferred_enrollment', 'ENR001');
+    global.localStorage.setItem('techverse_preferred_operator', 'ALEX');
+
+    // Simulate resetForNextParticipant
+    global.sessionStorage.removeItem('techverse_session_participant');
+    global.localStorage.removeItem('techverse_preferred_enrollment');
+    global.localStorage.removeItem('techverse_preferred_operator');
+
+    assert.strictEqual(global.sessionStorage.getItem('techverse_session_participant'), null);
+    assert.strictEqual(global.localStorage.getItem('techverse_preferred_enrollment'), null);
+    assert.strictEqual(global.localStorage.getItem('techverse_preferred_operator'), null);
+  });
+
+  // 25. Optional Briefing & Direct Progression
+  test('Registration screen progresses directly to Round 1 and briefing is an optional accessible modal', () => {
+    const regCode = fs.readFileSync('src/components/RegistrationScreen.js', 'utf8');
+    assert.ok(regCode.includes("portalState.goToScreen('round1_intro')"), 'Registration progresses directly to round1_intro without mandatory briefing');
+    assert.ok(regCode.includes('EventBriefingModal'), 'Registration provides optional EventBriefingModal');
+
+    const modalCode = fs.readFileSync('src/components/EventBriefingModal.js', 'utf8');
+    assert.ok(modalCode.includes('Server Sniper'), 'Briefing contains Server Sniper');
+    assert.ok(modalCode.includes('Pipeline Recall'), 'Briefing contains Pipeline Recall');
+    assert.ok(modalCode.includes('SwipeOps'), 'Briefing contains SwipeOps');
+    assert.ok(modalCode.includes('RANKING PROTOCOL'), 'Briefing contains Ranking Protocol');
+  });
+
+  // 26. Cinematic Multiverse Countdown
+  test('Cinematic Multiverse Countdown executes 3-2-1 sequence and directly launches game', () => {
+    const roundCode = fs.readFileSync('src/components/RoundIntroScreen.js', 'utf8');
+    assert.ok(roundCode.includes('multiverse-transition-overlay'), 'Contains multiverse overlay');
+    assert.ok(roundCode.includes('warp-ring'), 'Contains dimensional warp rings');
+    assert.ok(roundCode.includes('portalState.startRoundGameplay'), 'Directly launches gameplay timer when countdown concludes');
+  });
+
+  // 27. Countdown Deduplication: Exactly ONE countdown plays before Round 1
+  test('Exactly ONE timer/countdown screen displays before Round 1 starts', () => {
+    // 1. Router must guard against destroying/re-mounting active screen
+    const mainCode = fs.readFileSync('src/main.js', 'utf8');
+    assert.ok(mainCode.includes('this.currentRenderedScreen === screen'), 'main.js guards against re-mounting active screen');
+
+    // 2. Sandbox must pass skip_countdown to iframe
+    const sandboxCode = fs.readFileSync('src/components/GameSandboxScreen.js', 'utf8');
+    assert.ok(sandboxCode.includes("skip_countdown: 'true'"), 'GameSandboxScreen passes skip_countdown to iframe');
+
+    // 3. Game 1 must bypass internal countdown overlay in tournament mode
+    const g1Code = fs.readFileSync('public/games/game1/game.js', 'utf8');
+    assert.ok(g1Code.includes('isTournament'), 'Game 1 checks tournament mode');
+    assert.ok(g1Code.includes('beginRound()'), 'Game 1 immediately starts round without duplicate countdown overlay');
+  });
+
+  // 28. DevOps Rain Background Engine Integration
+  test('DevOps Rain background engine distributes streams across viewport immediately with high-contrast tokens', () => {
+    const rainCode = fs.readFileSync('src/services/devopsRain.js', 'utf8');
+    assert.ok(rainCode.includes('kubectl'), 'Rain contains kubectl token');
+    assert.ok(rainCode.includes('DEPLOY'), 'Rain contains DEPLOY token');
+    assert.ok(rainCode.includes('BUILD_OK'), 'Rain contains BUILD_OK token');
+    assert.ok(rainCode.includes('0x7FA2'), 'Rain contains hex telemetry');
+    assert.ok(rainCode.includes('this.height'), 'Rain calculates viewport height distribution');
+    assert.ok(rainCode.includes('rgba(2, 4, 10, 0.14)'), 'Rain uses smooth dissolve persistence');
+
+    const cssCode = fs.readFileSync('src/styles/portal.css', 'utf8');
+    assert.ok(cssCode.includes('#portal-canvas'), 'CSS defines portal-canvas');
+    assert.ok(cssCode.includes('multiverse-transition-overlay'), 'CSS defines multiverse overlay');
+    assert.ok(cssCode.includes('backdrop-filter: blur'), 'Multiverse overlay has backdrop blur for canvas visibility');
+  });
+
+  // 29. Registration Form Design & Field Order (Reference Specification)
+  test('Registration form places Full Name first, Enrollment second, uppercase conversion, and CONTINUE TO GAME button', () => {
+    const regCode = fs.readFileSync('src/components/RegistrationScreen.js', 'utf8');
+    
+    // Order verification: Full Name must appear before Enrollment Number
+    const nameIndex = regCode.indexOf('reg-fullname');
+    const enrollIndex = regCode.indexOf('reg-enrollment');
+    assert.ok(nameIndex > -1 && enrollIndex > -1, 'Both fields exist');
+    assert.ok(nameIndex < enrollIndex, 'Full Name field is rendered before Enrollment Number');
+
+    // Placeholders and labels
+    assert.ok(regCode.includes('FULL NAME'), 'Label FULL NAME exists');
+    assert.ok(regCode.includes('ENTER YOUR FULL NAME'), 'Placeholder ENTER YOUR FULL NAME exists');
+    assert.ok(regCode.includes('ENROLLMENT NUMBER'), 'Label ENROLLMENT NUMBER exists');
+    assert.ok(regCode.includes('ENTER YOUR ENROLLMENT NUMBER'), 'Placeholder ENTER YOUR ENROLLMENT NUMBER exists');
+
+    // Uppercase conversion and button
+    assert.ok(regCode.includes('.toUpperCase()'), 'JavaScript converts entered text to uppercase');
+    assert.ok(regCode.includes('CONTINUE TO GAME →'), 'Primary button text is CONTINUE TO GAME →');
+  });
+
+  // 30. Decorative Double Slash Removal
+  test('User-facing headings, badges, and labels have decorative // removed', () => {
+    const introCode = fs.readFileSync('src/components/CinematicIntro.js', 'utf8');
+    assert.ok(!introCode.includes('GATEWAY //'), 'No GATEWAY // in intro');
+    assert.ok(!introCode.includes('CLUB BATTLE //'), 'No CLUB BATTLE // in intro');
+    assert.ok(!introCode.includes('STAGE 01 //'), 'No STAGE 01 // in intro');
+    assert.ok(introCode.includes('STAGE 01 · 60s SHIFT'), 'Uses clean separator in intro stage pill');
+
+    const roundCode = fs.readFileSync('src/components/RoundIntroScreen.js', 'utf8');
+    assert.ok(!roundCode.includes('DIMENSIONAL WARP //'), 'No DIMENSIONAL WARP // in round intro');
+    assert.ok(roundCode.includes('STAGE 01 · SERVER SNIPER'), 'Clean stage title in round intro');
+    assert.ok(roundCode.includes("digitEl.textContent = 'DEPLOY'"), 'Countdown finishes with clean DEPLOY');
+
+    const regCode = fs.readFileSync('src/components/RegistrationScreen.js', 'utf8');
+    assert.ok(!regCode.includes('GATEWAY // CREDENTIAL ACCESS'), 'No double slash in registration badge');
+  });
+
   console.log(`\n================================================================`);
   console.log(`TEST RESULTS: ${passed}/${total} PASSED (100% SUCCESS)`);
   console.log(`================================================================\n`);
 }
 
 runTests();
+

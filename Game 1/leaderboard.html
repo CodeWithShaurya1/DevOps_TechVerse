@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SERVER SNIPER // AUDIENCE LIVE LEADERBOARD</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      background: #060911 radial-gradient(circle at 50% 20%, rgba(0, 229, 255, 0.08) 0%, transparent 70%);
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .stadium-container {
+      width: 100%;
+      max-width: 1100px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .leaderboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px;
+      background: rgba(13, 21, 39, 0.85);
+      border: 1px solid var(--border-bright);
+      border-radius: 12px;
+      box-shadow: 0 0 30px rgba(0, 229, 255, 0.15);
+    }
+
+    .leaderboard-title h1 {
+      font-size: 2.2rem;
+      font-weight: 900;
+      letter-spacing: 3px;
+      color: #ffffff;
+      text-shadow: 0 0 15px rgba(0, 229, 255, 0.5);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .leaderboard-title p {
+      color: var(--text-dim);
+      font-size: 0.85rem;
+      margin-top: 6px;
+      letter-spacing: 1px;
+    }
+
+    .live-status-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 20px;
+      background: rgba(0, 255, 136, 0.1);
+      border: 1px solid var(--neon-green);
+      color: var(--neon-green);
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .status-beacon {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--neon-green);
+      box-shadow: 0 0 10px var(--neon-green);
+      animation: beacon-pulse 1.2s infinite;
+    }
+
+    @keyframes beacon-pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.4); opacity: 0.4; }
+    }
+
+    .leaderboard-table-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-dim);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.95rem;
+    }
+
+    thead {
+      background: #0f182c;
+      border-bottom: 2px solid var(--border-dim);
+    }
+
+    th {
+      padding: 16px 20px;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--neon-cyan);
+    }
+
+    td {
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      color: var(--text-main);
+    }
+
+    tr:hover {
+      background: rgba(0, 229, 255, 0.04);
+    }
+
+    /* Podium row styling */
+    tr.rank-1 {
+      background: linear-gradient(90deg, rgba(255, 196, 0, 0.15), transparent);
+      color: #ffffff;
+      font-weight: 800;
+    }
+    tr.rank-1 td.rank-cell {
+      color: var(--neon-yellow);
+      font-size: 1.3rem;
+    }
+    tr.rank-1 td.score-cell {
+      color: var(--neon-yellow);
+      font-size: 1.3rem;
+      text-shadow: 0 0 10px var(--neon-yellow-glow);
+    }
+
+    tr.rank-2 td.rank-cell { color: #e2e8f0; font-size: 1.15rem; font-weight: 700; }
+    tr.rank-3 td.rank-cell { color: #cd7f32; font-size: 1.15rem; font-weight: 700; }
+
+    .score-cell {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--neon-cyan);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-dim);
+      font-size: 1rem;
+    }
+
+    .footer-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+
+    .danger-link {
+      background: transparent;
+      border: 1px solid rgba(255, 43, 86, 0.4);
+      color: var(--neon-red);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .danger-link:hover {
+      background: rgba(255, 43, 86, 0.15);
+      border-color: var(--neon-red);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="stadium-container">
+    <div class="leaderboard-header">
+      <div class="leaderboard-title">
+        <h1>
+          <span>🏆</span>
+          <span>SRE LEADERBOARD</span>
+        </h1>
+        <p>CLUB BATTLE: TECHVERSE // LIVE PRODUCTION TOP OPERATORS</p>
+      </div>
+
+      <div id="live-indicator" class="live-status-pill">
+        <span class="status-beacon"></span>
+        <span id="live-status-text">INITIALIZING...</span>
+      </div>
+    </div>
+
+    <div class="leaderboard-table-card">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 80px;">RANK</th>
+            <th>OPERATOR CALLSIGN</th>
+            <th>FINAL SCORE</th>
+            <th>PODS SAVED</th>
+            <th>MTTR</th>
+            <th>MAX COMBO</th>
+            <th>TIMESTAMP</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboard-tbody">
+          <tr>
+            <td colspan="7" class="empty-state">Awaiting first incoming incident reports...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="footer-bar">
+      <span>Auto-updates in real-time via Firebase Realtime Database & Local Storage</span>
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <button id="reset-board-btn" class="danger-link" title="Clear local leaderboard (Tournament Reset)">Reset Local Board</button>
+        <a href="index.html" class="icon-btn" style="text-decoration: none;">🎮 Back to Game</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- FIREBASE SDK (COMPAT) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+  <!-- APPLICATION SCRIPTS -->
+  <script src="firebase-config.js"></script>
+  <script src="db.js"></script>
+  <script>
+    (function() {
+      const tbody = document.getElementById('leaderboard-tbody');
+      const liveStatusText = document.getElementById('live-status-text');
+      const resetBtn = document.getElementById('reset-board-btn');
+
+      function formatTimestamp(ts) {
+        if (!ts) return '--:--:--';
+        const d = new Date(ts);
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      }
+
+      function escapeHtml(str) {
+        return String(str || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+      }
+
+      function renderScores(scores, isFirebase) {
+        if (isFirebase) {
+          liveStatusText.textContent = 'FIREBASE CLOUD LIVE';
+        } else {
+          liveStatusText.textContent = 'LOCAL SYNC ACTIVE';
+        }
+
+        if (!scores || scores.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="7" class="empty-state">No incident response scores recorded yet. Be the first to survive!</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = '';
+        scores.slice(0, 10).forEach((entry, idx) => {
+          const rank = idx + 1;
+          const tr = document.createElement('tr');
+          tr.className = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : '';
+
+          let rankBadge = `#${rank}`;
+          if (rank === 1) rankBadge = '🥇 #1';
+          else if (rank === 2) rankBadge = '🥈 #2';
+          else if (rank === 3) rankBadge = '🥉 #3';
+
+          tr.innerHTML = `
+            <td class="rank-cell">${rankBadge}</td>
+            <td><strong>${escapeHtml(entry.handle || 'ANONYMOUS')}</strong></td>
+            <td class="score-cell">${(entry.score || 0).toLocaleString()} PTS</td>
+            <td>${entry.podsSaved ?? '--'}</td>
+            <td>${entry.mttr ?? '--'}</td>
+            <td>${entry.maxCombo ? entry.maxCombo + 'x' : '--'}</td>
+            <td style="color: var(--text-dim); font-size: 0.8rem;">${formatTimestamp(entry.timestamp)}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      if (window.ServerSniperDB) {
+        window.ServerSniperDB.watchLeaderboard(renderScores);
+      }
+
+      resetBtn.addEventListener('click', () => {
+        if (confirm('Are you sure you want to reset the local leaderboard for a new tournament?')) {
+          if (window.ServerSniperDB && window.ServerSniperDB.clearLocalLeaderboard) {
+            window.ServerSniperDB.clearLocalLeaderboard();
+            renderScores([], false);
+          }
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
+

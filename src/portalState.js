@@ -38,8 +38,17 @@ class PortalStateManager {
     if (!this.participant || !this.participant.id) return;
     try {
       const results = await supabaseService.getParticipantOfficialResults(this.participant.id);
-      this.roundResults = { ...this.roundResults, ...results };
-      this.notify();
+      if (results) {
+        const hasDiff = [1, 2, 3].some(r => {
+          const oldRes = this.roundResults[r];
+          const newRes = results[r];
+          return JSON.stringify(oldRes) !== JSON.stringify(newRes);
+        });
+        if (hasDiff) {
+          this.roundResults = { ...this.roundResults, ...results };
+          this.notify();
+        }
+      }
     } catch (_) {}
   }
 
@@ -56,6 +65,59 @@ class PortalStateManager {
         console.error('[PortalState] Listener error:', e);
       }
     }
+  }
+
+  getEffectiveOperatorName() {
+    if (this.participant && this.participant.full_name) {
+      return this.participant.full_name;
+    }
+    if (typeof localStorage !== 'undefined') {
+      const preferred = localStorage.getItem('techverse_preferred_operator');
+      if (preferred) return preferred;
+    }
+    return 'UNASSIGNED';
+  }
+
+  hasStartedOfficialPlay() {
+    if (!this.participant) return false;
+    return !!(this.roundResults[1] || this.roundResults[2] || this.roundResults[3]);
+  }
+
+  async updateOperatorName(rawName, adminPassphrase = null) {
+    const normalized = (rawName || '').trim().toUpperCase();
+    if (!normalized || normalized.length < 2) {
+      throw new Error('Operator Name must be at least 2 characters.');
+    }
+
+    if (!this.participant) {
+      // Local display preference for unregistered/guest user
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('techverse_preferred_operator', normalized);
+      }
+      this.notify();
+      return { success: true, isGuest: true, name: normalized };
+    }
+
+    // Registered participant
+    if (this.hasStartedOfficialPlay()) {
+      // Enforce Admin Key to prevent cheating/identity tampering mid-tournament
+      if (!adminPassphrase || adminPassphrase.trim() !== supabaseService.ADMIN_PASSPHRASE) {
+        throw new Error('Official tournament records are locked. Identity modification during active challenge requires valid Admin Passphrase.');
+      }
+    }
+
+    await supabaseService.updateParticipantName(this.participant.id, normalized);
+    this.participant.full_name = normalized;
+
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem(SESSION_PARTICIPANT_KEY, JSON.stringify(this.participant));
+    }
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('techverse_preferred_operator', normalized);
+    }
+
+    this.notify();
+    return { success: true, isGuest: false, name: normalized };
   }
 
   setParticipant(participant) {
@@ -78,6 +140,24 @@ class PortalStateManager {
       });
     }
     this.goToScreen('cinematic_intro');
+  }
+
+  resetForNextParticipant() {
+    this.participant = null;
+    this.roundResults = { 1: null, 2: null, 3: null };
+    this.activeRoundStartTime = null;
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem(SESSION_PARTICIPANT_KEY);
+      [1, 2, 3].forEach(r => {
+        sessionStorage.removeItem(SESSION_ROUND_START_PREFIX + r);
+        sessionStorage.removeItem(SESSION_OFFICIAL_ATTEMPT_PREFIX + r);
+      });
+    }
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('techverse_preferred_enrollment');
+      localStorage.removeItem('techverse_preferred_operator');
+    }
+    this.goToScreen('registration');
   }
 
   goToScreen(screenName) {

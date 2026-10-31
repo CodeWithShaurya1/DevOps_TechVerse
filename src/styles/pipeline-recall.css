@@ -183,20 +183,20 @@
     .main-wrapper {
       max-width: 1400px;
       margin: 0 auto;
-      padding: 1.5rem 2rem 4rem 2rem;
+      padding: clamp(0.5rem, 1vh, 0.9rem) clamp(0.8rem, 1.8vw, 1.8rem) clamp(1rem, 2vh, 2rem);
       display: flex;
       flex-direction: column;
-      gap: 1.5rem;
+      gap: clamp(0.6rem, 1vh, 1rem);
     }
 
     /* HUD Top Status Bar */
     .hud-bar {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: clamp(0.5rem, 1vw, 0.85rem);
       background: var(--bg-surface);
       backdrop-filter: blur(12px);
-      padding: 1rem 1.5rem;
+      padding: clamp(0.4rem, 0.8vh, 0.7rem) clamp(0.8rem, 1.2vw, 1.2rem);
       border-radius: var(--radius-md);
       border: 1px solid var(--border-subtle);
       box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
@@ -340,10 +340,10 @@
       background: var(--bg-surface);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-lg);
-      padding: 2rem;
+      padding: clamp(0.7rem, 1.2vh, 1.2rem);
       display: flex;
       flex-direction: column;
-      gap: 1.5rem;
+      gap: clamp(0.5rem, 1vh, 0.85rem);
       position: relative;
       backdrop-filter: blur(16px);
       box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
@@ -354,12 +354,12 @@
       justify-content: space-between;
       align-items: center;
       border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      padding-bottom: 1rem;
+      padding-bottom: 0.5rem;
     }
 
     .arena-title {
       font-family: var(--font-display);
-      font-size: 1.15rem;
+      font-size: 1.05rem;
       letter-spacing: 1px;
       color: #fff;
       display: flex;
@@ -369,8 +369,8 @@
 
     .pipeline-diagram {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 1.25rem;
+      grid-template-columns: repeat(auto-fit, minmax(clamp(130px, 13vw, 180px), 1fr));
+      gap: clamp(0.5rem, 0.9vw, 0.9rem);
       align-items: stretch;
       position: relative;
     }
@@ -405,13 +405,13 @@
       background: rgba(11, 19, 36, 0.8);
       border: 2px dashed rgba(0, 243, 255, 0.25);
       border-radius: var(--radius-md);
-      min-height: 200px;
+      min-height: clamp(115px, 14vh, 155px);
       position: relative;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 1rem;
+      padding: 0.5rem;
       transition: var(--transition-smooth);
       z-index: 2;
       cursor: pointer;
@@ -639,9 +639,9 @@
 
     .pool-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 1.25rem;
-      min-height: 120px;
+      grid-template-columns: repeat(auto-fill, minmax(clamp(130px, 13vw, 180px), 1fr));
+      gap: clamp(0.5rem, 0.9vw, 0.9rem);
+      min-height: 100px;
       padding: 0.5rem;
       border-radius: var(--radius-md);
       background: rgba(6, 11, 22, 0.4);
@@ -668,12 +668,12 @@
       border-radius: var(--radius-md);
       overflow: hidden;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-      margin-top: 1rem;
+      margin-top: 0.4rem;
     }
 
     .terminal-header {
       background: #0a0e1c;
-      padding: 0.6rem 1.25rem;
+      padding: 0.45rem 1rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -703,12 +703,12 @@
     }
 
     .terminal-body {
-      height: 180px;
+      height: clamp(80px, 13vh, 120px);
       overflow-y: auto;
-      padding: 1rem 1.25rem;
+      padding: 0.6rem 1rem;
       font-family: var(--font-mono);
-      font-size: 0.85rem;
-      line-height: 1.6;
+      font-size: 0.82rem;
+      line-height: 1.5;
       color: #cbd5e1;
       display: flex;
       flex-direction: column;

@@ -30,18 +30,18 @@ export class LeaderboardScreen {
 
   renderShell() {
     this.container.innerHTML = `
-      <div class="screen-container" style="max-width: 1200px; margin: 0 auto; padding: 2rem 1rem; width: 100%;">
-        <div class="glass-panel" style="width: 100%;">
+      <div class="screen-container" style="max-width: 1200px; margin: 0 auto; padding: clamp(0.75rem, 2vh, 1.6rem) clamp(0.8rem, 2vw, 1.4rem); width: 100%;">
+        <div class="glass-panel" style="width: 100%; padding: clamp(1rem, 2.5vh, 2rem);">
           <!-- Header and Search -->
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.2rem; flex-wrap: wrap; gap: 0.8rem;">
             <div>
-              <span class="portal-badge" style="margin-bottom: 0.5rem; display: inline-block;">
+              <span class="portal-badge" style="margin-bottom: 0.4rem; display: inline-block;">
                 OFFICIAL TOURNAMENT STANDINGS
               </span>
-              <h1 style="font-family: var(--font-display); font-size: 2.2rem; font-weight: 900; letter-spacing: 1px;">
+              <h1 style="font-family: var(--font-display); font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 900; letter-spacing: 1px;">
                 CENTRAL LEADERBOARD
               </h1>
-              <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-dim); margin-top: 0.3rem;">
+              <div style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-dim); margin-top: 0.2rem;">
                 Single Source of Truth powered by Supabase · Official attempts only
               </div>
             </div>
@@ -53,20 +53,20 @@ export class LeaderboardScreen {
                 id="lb-search-input" 
                 class="cyber-input" 
                 placeholder="SEARCH OPERATOR..." 
-                style="width: 220px; padding: 0.55rem 0.9rem; font-size: 0.85rem;"
+                style="width: 200px; padding: 0.5rem 0.85rem; font-size: 0.82rem;"
                 value="${this.escapeHtml(this.searchQuery)}"
               />
-              <button id="lb-refresh-btn" class="btn-cyber btn-primary-cyan" style="font-size: 0.85rem;">
+              <button id="lb-refresh-btn" class="btn-cyber btn-primary-cyan" style="font-size: 0.82rem; padding: 0.5rem 1rem;">
                 🔄 REFRESH
               </button>
-              <button id="lb-back-btn" class="btn-cyber" style="font-size: 0.85rem;">
+              <button id="lb-back-btn" class="btn-cyber" style="font-size: 0.82rem; padding: 0.5rem 1rem;">
                 ⟵ ARENA
               </button>
             </div>
           </div>
 
           <!-- Ranking Rule Transparency Banner -->
-          <div style="background: rgba(8, 14, 26, 0.7); border: 1px solid var(--portal-border); border-radius: var(--radius-sm); padding: 0.75rem 1.2rem; margin-bottom: 1.5rem; display: flex; gap: 1.5rem; font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-dim); flex-wrap: wrap;">
+          <div style="background: rgba(8, 14, 26, 0.7); border: 1px solid var(--portal-border); border-radius: var(--radius-sm); padding: 0.6rem 1rem; margin-bottom: 1.2rem; display: flex; gap: 1.2rem; font-family: var(--font-mono); font-size: 0.76rem; color: var(--text-dim); flex-wrap: wrap;">
             <span><strong style="color: var(--neon-cyan);">Priority 1:</strong> Average Score (Desc)</span>
             <span><strong style="color: var(--neon-green);">Priority 2:</strong> Total Duration (Asc)</span>
             <span><strong style="color: var(--neon-purple);">Priority 3:</strong> Combined Streak (Desc)</span>
@@ -103,11 +103,7 @@ export class LeaderboardScreen {
 
     const backBtn = this.container.querySelector('#lb-back-btn');
     backBtn.addEventListener('click', () => {
-      if (portalState.participant) {
-        portalState.goToScreen('briefing');
-      } else {
-        portalState.goToScreen('cinematic_intro');
-      }
+      portalState.goToScreen('cinematic_intro');
     });
   }
 

@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Server Sniper (Chaos Edition) // Kubernetes SRE Simulator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Floating Toast Notification -->
+  <div id="floating-alert" class="floating-alert">SYSTEM ALERT</div>
+
+  <!-- HEADER -->
+  <header>
+    <div class="brand">
+      <svg class="brand-icon" viewBox="0 0 24 24">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+      </svg>
+      <h1>SERVER SNIPER <span class="badge">CHAOS ED.</span></h1>
+    </div>
+
+    <div class="header-meta">
+      <div class="player-badge">
+        <span>OPERATOR:</span>
+        <strong id="player-handle-display">UNASSIGNED</strong>
+      </div>
+
+      <div class="header-actions">
+        <button id="pause-btn" class="icon-btn" title="Pause or Resume game (P / Esc)">⏸ Pause</button>
+        <button id="mute-btn" class="icon-btn" title="Toggle audio on or off">🔊 Audio ON</button>
+        <a href="leaderboard.html" target="_blank" class="icon-btn" title="Open audience monitor screen in new window">🖥️ Audience Screen</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- HUD METRIC BARS -->
+  <div class="hud-bar">
+    <!-- Health Bar -->
+    <div class="hud-card">
+      <div class="hud-title">
+        <span>CLUSTER HEALTH</span>
+        <span id="system-health-val" style="color: var(--neon-green);">100%</span>
+      </div>
+      <div class="health-meter-container">
+        <div id="health-meter-fill" class="health-meter-fill"></div>
+      </div>
+    </div>
+
+    <!-- Timer -->
+    <div class="hud-card">
+      <div class="hud-title">SHIFT COUNTDOWN</div>
+      <div class="hud-value-row">
+        <span id="time-remaining" class="hud-val">45s</span>
+        <span id="total-time-badge" style="font-size: 0.7rem; color: var(--text-dim);">45s TOTAL</span>
+      </div>
+    </div>
+
+    <!-- Score & Multiplier -->
+    <div class="hud-card">
+      <div class="hud-title">
+        <span>UPTIME SCORE</span>
+        <span id="combo-badge" class="combo-badge">🔥 2X COMBO (<span id="combo-timer-val">5.0s</span>)</span>
+      </div>
+      <div class="hud-value-row">
+        <span id="score-val" class="hud-val" style="color: var(--neon-cyan);">0</span>
+        <span style="font-size: 0.7rem; color: var(--text-dim);">PTS</span>
+      </div>
+    </div>
+
+    <!-- Cluster Node Breakdown -->
+    <div class="hud-card">
+      <div class="hud-title">ACTIVE POD BREAKDOWN</div>
+      <div style="display: flex; gap: 8px; margin-top: 4px;">
+        <span class="metric-pill green">🟢 <strong id="healthy-count">36</strong></span>
+        <span class="metric-pill yellow">⚠️ <strong id="warning-count">0</strong></span>
+        <span class="metric-pill red">🔥 <strong id="critical-count">0</strong></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN WORKSPACE -->
+  <main>
+    <!-- LEFT SIDEBAR: SRE TOOLKIT -->
+    <aside class="left-sidebar">
+      <div class="panel-card">
+        <h3>🛠️ SRE Action Panel</h3>
+
+        <!-- Draggable Load Balancer -->
+        <div id="load-balancer-tool" class="tool-item" draggable="true" title="Drag and drop onto yellow pods to offload traffic">
+          <div class="tool-icon">⚖️</div>
+          <div class="tool-info">
+            <div class="tool-name">Load Balancer</div>
+            <div class="tool-desc">Drag onto Yellow Pod to offload</div>
+          </div>
+        </div>
+
+        <!-- Autoscaler Button -->
+        <button id="autoscaler-btn" class="action-btn-large" title="Scale up all warning pods immediately (20s cooldown)">
+          <span>⚡ Autoscaler</span>
+          <span class="kbd-badge">[A]</span>
+          <div id="autoscaler-cooldown-bar" class="cooldown-overlay"></div>
+        </button>
+      </div>
+
+      <!-- Quick Controls Guide -->
+      <div class="panel-card">
+        <h3>📋 Incident Protocols</h3>
+        <div class="control-guide">
+          <div class="control-row">
+            <span>High CPU (⚠️):</span>
+            <span class="kbd-badge">Hover + S</span>
+          </div>
+          <div class="control-row">
+            <span>Crash Loop (🔄):</span>
+            <span class="kbd-badge">Hover + S / Balancer</span>
+          </div>
+          <div class="control-row">
+            <span>Offload Traffic:</span>
+            <span class="kbd-badge">Drag Balancer</span>
+          </div>
+          <div class="control-row">
+            <span>Hard Reboot Red Pod:</span>
+            <span class="kbd-badge">Hold Click 1.5s</span>
+          </div>
+          <div class="control-row">
+            <span>Terminal Emergency Fix:</span>
+            <span class="kbd-badge">Double-Click</span>
+          </div>
+          <div class="control-row">
+            <span>Autoscale All Yellow:</span>
+            <span class="kbd-badge">Key [A]</span>
+          </div>
+          <div class="control-row">
+            <span>Ghost Pods (False Alarm):</span>
+            <span style="color: var(--neon-cyan); font-weight:700;">DO NOT TOUCH</span>
+          </div>
+          <div class="control-row">
+            <span>Wrong Action Penalty:</span>
+            <span style="color: #f87171;">-25 PTS</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- CENTER: 6x6 KUBERNETES POD ARENA -->
+    <section class="arena-container">
+      <div class="arena-header">
+        <div class="arena-title">
+          <span>☸️ PRODUCTION CLUSTER</span>
+          <span style="color: var(--text-dim); font-size: 0.72rem;">(36 Managed Pods)</span>
+        </div>
+        <div class="cluster-metrics">
+          <span>Target SLA: <strong>99.9%</strong></span>
+        </div>
+      </div>
+
+      <div id="pod-grid" class="pod-grid">
+        <!-- 36 Pod elements generated dynamically by game.js -->
+      </div>
+    </section>
+
+    <!-- RIGHT SIDEBAR: SRE LOG & MINI LEADERBOARD -->
+    <aside class="right-sidebar">
+      <div class="panel-card" style="display: flex; flex-direction: column; height: 320px;">
+        <h3>📡 Cluster Event Log</h3>
+        <div id="event-log" class="event-log-container">
+          <!-- Live events logged here -->
+        </div>
+      </div>
+
+      <div class="panel-card">
+        <h3>🏆 Local Top Operators</h3>
+        <div id="side-leaderboard-list" class="leaderboard-preview-list">
+          <div style="color: var(--text-dim); font-size: 0.75rem;">Loading scores...</div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- MINI TERMINAL MODAL (Double click on red pod) -->
+  <div id="terminal-overlay" class="terminal-overlay">
+    <div class="terminal-box">
+      <div class="terminal-topbar">
+        <span>EMERGENCY KUBERNETES TERMINAL</span>
+        <button id="terminal-close-btn" class="icon-btn" style="padding: 2px 6px;">✕</button>
+      </div>
+      <div class="terminal-body">
+        <div class="term-log">
+          <div>[CRITICAL K8S ALERT] Pod deadlocked with exit code 137.</div>
+          <div>Target Node: <strong id="terminal-target-label" style="color: var(--neon-red);">pod-01</strong></div>
+          <div style="color: var(--neon-yellow); margin-top: 4px;">Execute 'kill' or 'fix' to force pod remediation:</div>
+        </div>
+        <div class="term-cmd-row">
+          <span class="term-prompt">k8s-sre&gt;</span>
+          <input type="text" id="terminal-input" class="term-input" placeholder="type 'kill' or 'fix' and hit enter" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="term-hint">Press ENTER to execute | ESC to abort</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRE-GAME START MODAL -->
+  <div id="start-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <h2>SERVER SNIPER</h2>
+      <div class="modal-sub">CHAOS EDITION // KUBERNETES SRE TRIAGE SIMULATOR</div>
+
+      <div class="input-group">
+        <label for="handle-input" class="input-label">OPERATOR CALLSIGN / HANDLE (3-12 CHARACTERS)</label>
+        <input type="text" id="handle-input" class="cyber-input" placeholder="e.g. ROOT_SNIPER" maxlength="12" autofocus>
+      </div>
+
+      <div class="input-group">
+        <label class="input-label">SHIFT DURATION & TEMPO</label>
+        <div class="tempo-selector">
+          <button type="button" class="tempo-btn" data-sec="30">🚀 30s HYPER</button>
+          <button type="button" class="tempo-btn active" data-sec="45">⚡ 45s BLITZ</button>
+          <button type="button" class="tempo-btn" data-sec="60">🛡️ 60s STANDARD</button>
+        </div>
+      </div>
+
+      <button id="start-btn" class="primary-btn">INITIALIZE SHIFT</button>
+
+      <div class="start-rules">
+        <strong>Mission Briefing:</strong>
+        <p style="margin-top: 4px;">
+          Keep production cluster health above 0% for 60 seconds.
+          <br>• Remediate <strong>High CPU (⚠️)</strong> and <strong>Crash Loops (🔄)</strong> via <span class="kbd-badge">S</span> or Load Balancer (+200 pts)
+          <br>• Hold click Red Pod 1.5s or double-click to type <span class="kbd-badge">kill</span> (+500 pts)
+          <br>• Press <span class="kbd-badge">A</span> for Autoscaler (clears all yellow/loop pods, 20s cooldown)
+          <br>• Beware of <strong>Ghost Pods (Cyan)</strong>: false alarms that dock 150 points!
+          <br>• Beware of <strong>T-45s Traffic Spike</strong> and <strong>T-20s Chaos Monkey</strong>!
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3-2-1 COUNTDOWN OVERLAY -->
+  <div id="countdown-overlay" class="countdown-overlay">
+    <div id="countdown-number" class="countdown-number">3</div>
+  </div>
+
+  <!-- POST-GAME RESULT MODAL -->
+  <div id="result-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <h2 id="result-title">SHIFT SURVIVED</h2>
+      <div id="result-subtitle" class="modal-sub">60 seconds survived</div>
+
+      <div class="stats-summary-grid">
+        <div class="summary-stat-box">
+          <div class="summary-stat-label">Final Score</div>
+          <div id="result-score" class="summary-stat-val">0</div>
+        </div>
+        <div class="summary-stat-box">
+          <div class="summary-stat-label">Pods Remediated</div>
+          <div id="result-pods-saved" class="summary-stat-val">0</div>
+        </div>
+        <div class="summary-stat-box">
+          <div class="summary-stat-label">High CPU Solved</div>
+          <div id="result-high-cpu" class="summary-stat-val">0</div>
+        </div>
+        <div class="summary-stat-box">
+          <div class="summary-stat-label">Crash Loops Broken</div>
+          <div id="result-crash-loops" class="summary-stat-val">0</div>
+        </div>
+        <div class="summary-stat-box">
+          <div class="summary-stat-label">Mean Time to Recovery</div>
+          <div id="result-mttr" class="summary-stat-val">0.0s</div>
+        </div>
+        <div class="summary-stat-box">
+          <div class="summary-stat-label">Longest Combo</div>
+          <div id="result-combo" class="summary-stat-val">0x</div>
+        </div>
+        <div class="summary-stat-box" style="grid-column: span 2;">
+          <div class="summary-stat-label">Peak SLA Uptime</div>
+          <div id="result-uptime" class="summary-stat-val">100%</div>
+        </div>
+      </div>
+
+      <div id="sync-status-badge" class="sync-status-badge">Checking database status...</div>
+
+      <h3 style="font-size: 0.85rem; color: var(--neon-cyan); margin-bottom: 8px; text-transform: uppercase;">
+        Shift Leaderboard
+      </h3>
+      <div id="result-leaderboard-list" class="leaderboard-preview-list" style="margin-bottom: 20px;">
+        <!-- Top 5 scores populated dynamically -->
+      </div>
+
+      <button id="restart-btn" class="primary-btn">START NEXT SHIFT</button>
+    </div>
+  </div>
+
+  <!-- FIREBASE SDK (COMPAT) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+  <!-- APPLICATION SCRIPTS -->
+  <script src="firebase-config.js"></script>
+  <script src="db.js"></script>
+  <script src="game.js"></script>
+
+  <!-- TECHVERSE '26 TOURNAMENT ADAPTER -->
+  <script>
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      const player = params.get('player') || 'OPERATOR';
+      const startTime = Date.now();
+
+      window.addEventListener('DOMContentLoaded', () => {
+        const handleInput = document.getElementById('handle-input');
+        const startBtn = document.getElementById('start-btn');
+        const playerHandleDisplay = document.getElementById('player-handle-display');
+
+        if (handleInput) handleInput.value = player;
+        if (playerHandleDisplay) playerHandleDisplay.textContent = player;
+
+        // Automatically start the shift countdown sequence to skip local registration modal
+        setTimeout(() => {
+          if (startBtn) startBtn.click();
+        }, 120);
+
+        // Intercept submitScore
+        const originalDB = window.ServerSniperDB;
+        window.ServerSniperDB = {
+          ...originalDB,
+          submitScore: async function(entry) {
+            const elapsed = Date.now() - startTime;
+            if (window.parent && window.parent !== window) {
+              window.parent.postMessage({
+                type: 'TECHVERSE_GAME_COMPLETED',
+                roundNumber: 1,
+                gameName: 'Server Sniper',
+                score: entry.score,
+                durationMs: Math.min(60000, elapsed),
+                streak: entry.maxCombo || 0,
+                podsSaved: entry.podsSaved || 0,
+                status: 'completed'
+              }, '*');
+            }
+
+            if (originalDB && originalDB.submitScore) {
+              return originalDB.submitScore(entry);
+            }
+            return { success: true, synced: true, message: 'Recorded', leaderboard: [] };
+          }
+        };
+
+        // Add tournament advance button in result modal
+        const resultModal = document.getElementById('result-modal');
+        if (resultModal) {
+          const nextBtn = document.createElement('button');
+          nextBtn.className = 'primary-btn';
+          nextBtn.style.cssText = 'width: 100%; margin-top: 15px; background: linear-gradient(135deg, #00f3ff, #a855f7); color: #000; font-weight: 800; cursor: pointer; padding: 14px; border-radius: 8px; border: none; font-size: 1rem;';
+          nextBtn.textContent = 'PROCEED TO ROUND 2: PIPELINE RECALL ➔';
+          nextBtn.addEventListener('click', () => {
+            if (window.parent && window.parent !== window) {
+              window.parent.postMessage({ type: 'TECHVERSE_ADVANCE_ROUND', nextRound: 2 }, '*');
+            }
+          });
+          resultModal.querySelector('.modal-card')?.appendChild(nextBtn);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
+

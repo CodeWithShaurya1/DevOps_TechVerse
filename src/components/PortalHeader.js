@@ -3,6 +3,8 @@
  */
 import { portalState } from '../portalState.js';
 import { portalSound } from '../services/soundManager.js';
+import { OperatorSelectModal } from './OperatorSelectModal.js';
+import { EventBriefingModal } from './EventBriefingModal.js';
 
 export class PortalHeader {
   constructor() {
@@ -11,7 +13,7 @@ export class PortalHeader {
 
   render() {
     const participant = portalState.participant;
-    const operatorName = participant ? participant.full_name : 'UNASSIGNED';
+    const operatorName = portalState.getEffectiveOperatorName();
     const currentScreen = portalState.currentScreen;
 
     return `
@@ -25,10 +27,16 @@ export class PortalHeader {
         </div>
 
         <div class="portal-nav-actions">
-          <div class="operator-badge" title="Registered Competitor">
-            <span>OPERATOR:</span>
-            <strong>${this.escapeHtml(operatorName)}</strong>
-          </div>
+          <button id="nav-operator-btn" class="operator-badge interactive-operator" title="View or edit operator identity" aria-label="Operator Identity: ${this.escapeHtml(operatorName)}">
+            <span class="status-pulse"></span>
+            <span class="operator-label">OPERATOR:</span>
+            <strong class="operator-name">${this.escapeHtml(operatorName)}</strong>
+            <span class="operator-edit-tag">[EDIT]</span>
+          </button>
+
+          <button id="nav-rules-btn" class="btn-cyber" title="View mission directives and ranking rules">
+            📖 RULES
+          </button>
 
           <button id="nav-sound-toggle" class="btn-cyber" title="Toggle sound effects">
             🔊 AUDIO
@@ -52,11 +60,21 @@ export class PortalHeader {
     const brand = parentElement.querySelector('#nav-brand');
     if (brand) {
       brand.addEventListener('click', () => {
-        if (portalState.participant) {
-          portalState.goToScreen('briefing');
-        } else {
-          portalState.goToScreen('cinematic_intro');
-        }
+        portalState.goToScreen('cinematic_intro');
+      });
+    }
+
+    const rulesBtn = parentElement.querySelector('#nav-rules-btn');
+    if (rulesBtn) {
+      rulesBtn.addEventListener('click', () => {
+        new EventBriefingModal().mount(document.body);
+      });
+    }
+
+    const opBtn = parentElement.querySelector('#nav-operator-btn');
+    if (opBtn) {
+      opBtn.addEventListener('click', () => {
+        new OperatorSelectModal().mount(document.body);
       });
     }
 

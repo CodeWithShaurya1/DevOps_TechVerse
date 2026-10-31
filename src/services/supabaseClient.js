@@ -177,6 +177,33 @@ class SupabaseService {
     return { participant: newParticipant, isNew: true };
   }
 
+  async updateParticipantName(participantId, newFullName) {
+    const normalizedName = this.normalizeName(newFullName);
+    if (!normalizedName || normalizedName.length < 2) {
+      throw new Error('Operator Call Sign / Name must be at least 2 characters.');
+    }
+
+    if (this.isCloudConnected) {
+      try {
+        await this.client
+          .from('participants')
+          .update({ full_name: normalizedName })
+          .eq('id', participantId);
+      } catch (err) {
+        console.warn('[SupabaseService] Cloud participant update failed, updating local store:', err);
+      }
+    }
+
+    const localList = this._getLocalParticipants();
+    const target = localList.find(p => p.id === participantId);
+    if (target) {
+      target.full_name = normalizedName;
+      this._saveLocalParticipants(localList);
+    }
+
+    return normalizedName;
+  }
+
   // --- 2. OFFICIAL RESULTS & ONE-ATTEMPT CHECK ---
   async getParticipantOfficialResults(participantId) {
     if (!participantId) return {};
