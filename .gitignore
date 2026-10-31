@@ -14,3 +14,5 @@ Game 3./node_modules/
 
 # Local Environment Overrides
 .env.local
+.vercel
+.env*
