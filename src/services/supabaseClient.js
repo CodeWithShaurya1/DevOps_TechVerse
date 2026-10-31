@@ -130,9 +130,29 @@ class SupabaseService {
           .maybeSingle();
 
         if (!selectErr && existing) {
+          const resolvedName = (normalizedName && normalizedName !== 'OPERATOR') ? normalizedName : existing.full_name;
+
+          // If participant provided a real name that differs from stored name (e.g. was previously 'OPERATOR'), heal across all tables
+          if (normalizedName && normalizedName !== 'OPERATOR' && existing.full_name !== normalizedName) {
+            try {
+              await this.client
+                .from('final_scores')
+                .update({ full_name: normalizedName })
+                .eq('enrollment_number', normalizedEnroll);
+
+              await Promise.allSettled([
+                this.client.from('game1_scores').update({ full_name: normalizedName }).eq('enrollment_number', normalizedEnroll),
+                this.client.from('game2_scores').update({ full_name: normalizedName }).eq('enrollment_number', normalizedEnroll),
+                this.client.from('game3_scores').update({ full_name: normalizedName }).eq('enrollment_number', normalizedEnroll)
+              ]);
+            } catch (healErr) {
+              console.warn('[SupabaseService] Cloud auto-heal name warning:', healErr);
+            }
+          }
+
           const participant = {
             id: existing.enrollment_number,
-            full_name: existing.full_name,
+            full_name: resolvedName,
             enrollment_number_normalized: existing.enrollment_number
           };
           this._syncLocalParticipantRecord(participant);
@@ -180,9 +200,14 @@ class SupabaseService {
     const existingLocal = localFinals.find(f => f.enrollment_number === normalizedEnroll);
 
     if (existingLocal) {
+      const resolvedName = (normalizedName && normalizedName !== 'OPERATOR') ? normalizedName : existingLocal.full_name;
+      if (normalizedName && normalizedName !== 'OPERATOR' && existingLocal.full_name !== normalizedName) {
+        existingLocal.full_name = normalizedName;
+        this._saveLocalList(STORAGE_FINAL, localFinals);
+      }
       const participant = {
         id: existingLocal.enrollment_number,
-        full_name: existingLocal.full_name,
+        full_name: resolvedName,
         enrollment_number_normalized: existingLocal.enrollment_number
       };
       return { participant, isNew: false };
@@ -269,6 +294,67 @@ class SupabaseService {
     }
 
     return normalizedName;
+  }
+
+  async getParticipantFullName(enroll) {
+    if (!enroll) return null;
+
+    // 1. Check active session in browser
+    if (typeof sessionStorage !== 'undefined') {
+      try {
+        const saved = JSON.parse(sessionStorage.getItem('techverse_session_participant') || '{}');
+        if (saved && (saved.enrollment_number_normalized === enroll || saved.id === enroll || saved.enrollment === enroll)) {
+          if (saved.full_name && saved.full_name !== 'OPERATOR') {
+            return this.normalizeName(saved.full_name);
+          }
+        }
+      } catch (_) {}
+    }
+
+    // 2. Check local preferred operator callsign
+    if (typeof localStorage !== 'undefined') {
+      const preferred = localStorage.getItem('techverse_preferred_operator');
+      if (preferred && preferred !== 'OPERATOR' && preferred.length >= 2) {
+        return this.normalizeName(preferred);
+      }
+    }
+
+    // 3. Check local final_scores list
+    const localFinals = this._getLocalList(STORAGE_FINAL);
+    const local = localFinals.find(f => f.enrollment_number === enroll && f.full_name && f.full_name !== 'OPERATOR');
+    if (local && local.full_name) return this.normalizeName(local.full_name);
+
+    // 4. Check cloud final_scores table
+    if (this.isCloudConnected) {
+      try {
+        const { data } = await this.client
+          .from('final_scores')
+          .select('full_name')
+          .eq('enrollment_number', enroll)
+          .maybeSingle();
+        if (data && data.full_name && data.full_name !== 'OPERATOR') {
+          return this.normalizeName(data.full_name);
+        }
+      } catch (_) {}
+
+      // 5. Check game tables for any existing round where full_name was saved
+      try {
+        for (const t of ['game1_scores', 'game2_scores', 'game3_scores']) {
+          const { data } = await this.client
+            .from(t)
+            .select('full_name')
+            .eq('enrollment_number', enroll)
+            .neq('full_name', 'OPERATOR')
+            .limit(1)
+            .maybeSingle();
+          if (data && data.full_name && data.full_name !== 'OPERATOR') {
+            return this.normalizeName(data.full_name);
+          }
+        }
+      } catch (_) {}
+    }
+
+    return null;
   }
 
   // --- 2. OFFICIAL ROUND SCORES (Tables 1, 2, 3: game1_scores, game2_scores, game3_scores) ---
@@ -401,10 +487,20 @@ class SupabaseService {
     completedAt = new Date().toISOString()
   }) {
     const enroll = this.normalizeEnrollment(enrollmentNumber || participantId);
-    const name = this.normalizeName(fullName || 'OPERATOR');
+    let name = this.normalizeName(fullName);
 
     if (!enroll) throw new Error('Missing operator enrollment number');
     if (![1, 2, 3].includes(roundNumber)) throw new Error('Invalid round number');
+
+    // If name is missing or 'OPERATOR', actively recover from registration, session, or database
+    if (!name || name === 'OPERATOR') {
+      const recovered = await this.getParticipantFullName(enroll);
+      if (recovered && recovered !== 'OPERATOR') {
+        name = recovered;
+      } else {
+        name = name || 'OPERATOR';
+      }
+    }
 
     const streakVal = Math.max(0, streakCount || bestStreak || 0);
     const accuracyVal = totalActions > 0 ? Number(((successfulActions / totalActions) * 100).toFixed(2)) : 100.0;
@@ -469,6 +565,14 @@ class SupabaseService {
 
   // Keep Table 4: final_scores updated with total score of 3/3
   async _syncFinalScores(enroll, name) {
+    let resolvedName = name;
+    if (!resolvedName || resolvedName === 'OPERATOR') {
+      const recovered = await this.getParticipantFullName(enroll);
+      if (recovered && recovered !== 'OPERATOR') {
+        resolvedName = recovered;
+      }
+    }
+
     const officialResults = await this.getParticipantOfficialResults(enroll);
     const r1 = officialResults[1];
     const r2 = officialResults[2];
@@ -498,7 +602,7 @@ class SupabaseService {
 
     const finalRecord = {
       enrollment_number: enroll,
-      full_name: name,
+      full_name: resolvedName || 'OPERATOR',
       game1_score: g1Score,
       game2_score: g2Score,
       game3_score: g3Score,
@@ -519,6 +623,19 @@ class SupabaseService {
 
     if (this.isCloudConnected) {
       try {
+        // Protect against overwriting existing non-OPERATOR name with 'OPERATOR'
+        if (!resolvedName || resolvedName === 'OPERATOR') {
+          const { data: existing } = await this.client
+            .from('final_scores')
+            .select('full_name')
+            .eq('enrollment_number', enroll)
+            .maybeSingle();
+          if (existing && existing.full_name && existing.full_name !== 'OPERATOR') {
+            resolvedName = existing.full_name;
+            finalRecord.full_name = existing.full_name;
+          }
+        }
+
         await this.client
           .from('final_scores')
           .upsert(finalRecord, { onConflict: 'enrollment_number' });

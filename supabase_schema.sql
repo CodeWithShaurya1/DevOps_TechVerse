@@ -293,6 +293,14 @@ BEGIN
     r_enroll := NEW.enrollment_number;
     r_name := NEW.full_name;
 
+    -- If incoming full_name is 'OPERATOR' or empty, look for existing registered name
+    IF r_name IS NULL OR r_name = 'OPERATOR' OR r_name = '' THEN
+        SELECT full_name INTO r_name FROM public.final_scores WHERE enrollment_number = r_enroll;
+        IF r_name IS NULL OR r_name = '' THEN
+            r_name := COALESCE(NEW.full_name, 'OPERATOR');
+        END IF;
+    END IF;
+
     -- Round 1 Score
     SELECT score, completion_time_ms, streak, created_at INTO r1
     FROM public.game1_scores
@@ -365,7 +373,11 @@ BEGIN
         r_completed, r_status, r_last_at
     )
     ON CONFLICT (enrollment_number) DO UPDATE SET
-        full_name = EXCLUDED.full_name,
+        full_name = CASE 
+            WHEN EXCLUDED.full_name IS NOT NULL AND EXCLUDED.full_name <> 'OPERATOR' AND EXCLUDED.full_name <> '' THEN EXCLUDED.full_name
+            WHEN final_scores.full_name IS NOT NULL AND final_scores.full_name <> 'OPERATOR' AND final_scores.full_name <> '' THEN final_scores.full_name
+            ELSE EXCLUDED.full_name
+        END,
         game1_score = EXCLUDED.game1_score,
         game2_score = EXCLUDED.game2_score,
         game3_score = EXCLUDED.game3_score,

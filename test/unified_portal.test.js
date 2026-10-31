@@ -430,6 +430,20 @@ async function runTests() {
     assert.ok(!regCode.includes('GATEWAY // CREDENTIAL ACCESS'), 'No double slash in registration badge');
   });
 
+  // 31. Operator Name Preservation & Anti-OPERATOR Guard
+  test('Supabase service and triggers prevent full_name from defaulting to or being overwritten by OPERATOR', () => {
+    const clientCode = fs.readFileSync('src/services/supabaseClient.js', 'utf8');
+    assert.ok(clientCode.includes('getParticipantFullName(enroll)'), 'Has getParticipantFullName method to recover real name');
+    assert.ok(clientCode.includes("normalizedName !== 'OPERATOR'"), 'Validates non-OPERATOR name in registration');
+    assert.ok(clientCode.includes("finalRecord.full_name = existing.full_name"), 'Protects existing registered name from being replaced by OPERATOR');
+
+    const schemaCode = fs.readFileSync('supabase_schema.sql', 'utf8');
+    assert.ok(schemaCode.includes("WHEN EXCLUDED.full_name IS NOT NULL AND EXCLUDED.full_name <> 'OPERATOR'"), 'Trigger protects full_name from OPERATOR overwrite in conflict resolution');
+
+    const portalCode = fs.readFileSync('src/portalState.js', 'utf8');
+    assert.ok(portalCode.includes('fullName: fullName'), 'submitRoundResult passes resolved fullName to submitGameResult');
+  });
+
   console.log(`\n================================================================`);
   console.log(`TEST RESULTS: ${passed}/${total} PASSED (100% SUCCESS)`);
   console.log(`================================================================\n`);

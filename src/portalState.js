@@ -246,8 +246,24 @@ class PortalStateManager {
 
     const isOfficial = this.isOfficialRound[roundNumber] !== false;
 
+    const enroll = this.participant.enrollment_number_normalized || this.participant.enrollment || this.participant.id;
+    let fullName = this.participant.full_name || this.participant.name || this.getEffectiveOperatorName();
+
+    if (!fullName || fullName === 'OPERATOR') {
+      const recovered = await supabaseService.getParticipantFullName(enroll);
+      if (recovered && recovered !== 'OPERATOR') {
+        fullName = recovered;
+        this.participant.full_name = recovered;
+        if (typeof sessionStorage !== 'undefined') {
+          sessionStorage.setItem(SESSION_PARTICIPANT_KEY, JSON.stringify(this.participant));
+        }
+      }
+    }
+
     const res = await supabaseService.submitGameResult({
       participantId: this.participant.id,
+      enrollmentNumber: enroll,
+      fullName: fullName,
       roundNumber,
       gameName,
       score,
