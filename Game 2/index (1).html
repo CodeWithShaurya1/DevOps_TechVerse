@@ -1,0 +1,2742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DEVOPS ARENA: Round 2 — Pipeline Recall</title>
+  <meta name="description" content="DevOps Arena: The Production Rescue Mission - Round 2 Pipeline Recall. 100% frontend pure HTML5 browser game for Techverse Club Battle.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Orbitron:wght@500;700;800;900&family=Rajdhani:wght@500;600;700&display=swap">
+  <style>
+
+    :root {
+      --bg-deep: #060913;
+      --bg-surface: rgba(14, 22, 41, 0.75);
+      --bg-surface-elevated: rgba(22, 34, 62, 0.85);
+      --bg-card: rgba(17, 28, 52, 0.7);
+      --border-subtle: rgba(0, 243, 255, 0.18);
+      --border-bright: rgba(0, 243, 255, 0.6);
+      --neon-cyan: #00f3ff;
+      --neon-cyan-glow: rgba(0, 243, 255, 0.4);
+      --neon-green: #10b981;
+      --neon-green-glow: rgba(16, 185, 129, 0.4);
+      --neon-purple: #a855f7;
+      --neon-purple-glow: rgba(168, 85, 247, 0.4);
+      --neon-amber: #f59e0b;
+      --neon-amber-glow: rgba(245, 158, 11, 0.4);
+      --neon-red: #ef4444;
+      --neon-red-glow: rgba(239, 68, 68, 0.4);
+      --text-main: #f1f5f9;
+      --text-dim: #94a3b8;
+      --text-highlight: #38bdf8;
+      --font-display: 'Orbitron', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-ui: 'Rajdhani', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'Fira Code', 'Consolas', 'Monaco', monospace;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --transition-fast: 0.18s ease;
+      --transition-smooth: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: var(--bg-deep);
+      color: var(--text-main);
+      font-family: var(--font-ui);
+      font-size: 16px;
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(0, 243, 255, 0.08) 0%, transparent 60%),
+        radial-gradient(circle at 80% 90%, rgba(168, 85, 247, 0.06) 0%, transparent 50%),
+        linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+      user-select: none;
+    }
+
+    /* Background Animated Scanlines & Grid glow */
+    .cyber-scanlines {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+      background-size: 100% 4px;
+      opacity: 0.35;
+      z-index: 100;
+    }
+
+    /* App Header & Top Navigation Bar */
+    .app-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background: rgba(6, 9, 19, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-subtle);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .brand-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .brand-badge {
+      background: linear-gradient(135deg, rgba(0, 243, 255, 0.2), rgba(168, 85, 247, 0.2));
+      border: 1px solid var(--neon-cyan);
+      color: var(--neon-cyan);
+      padding: 0.35rem 0.75rem;
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      letter-spacing: 2px;
+      border-radius: var(--radius-sm);
+      text-shadow: 0 0 8px var(--neon-cyan-glow);
+      box-shadow: 0 0 12px rgba(0, 243, 255, 0.2);
+    }
+
+    .app-title-group h1 {
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      background: linear-gradient(120deg, #ffffff 40%, var(--neon-cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .app-subtitle {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      letter-spacing: 0.5px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    /* Futuristic Buttons */
+    .btn-cyber {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 0.6rem 1.1rem;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-ui);
+      font-weight: 700;
+      font-size: 0.95rem;
+      letter-spacing: 1px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: var(--transition-fast);
+      text-transform: uppercase;
+    }
+
+    .btn-cyber:hover {
+      border-color: var(--neon-cyan);
+      color: var(--neon-cyan);
+      box-shadow: 0 0 14px var(--neon-cyan-glow);
+      transform: translateY(-1px);
+    }
+
+    .btn-cyber.primary {
+      background: linear-gradient(135deg, rgba(0, 243, 255, 0.25), rgba(0, 150, 255, 0.15));
+      border-color: var(--neon-cyan);
+      color: #ffffff;
+      text-shadow: 0 0 6px var(--neon-cyan);
+    }
+
+    .btn-cyber.primary:hover {
+      background: linear-gradient(135deg, rgba(0, 243, 255, 0.45), rgba(0, 150, 255, 0.3));
+      box-shadow: 0 0 20px var(--neon-cyan-glow);
+    }
+
+    .btn-cyber.accent-green {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(5, 150, 105, 0.2));
+      border-color: var(--neon-green);
+      color: #fff;
+      text-shadow: 0 0 8px var(--neon-green-glow);
+    }
+
+    .btn-cyber.accent-green:hover {
+      box-shadow: 0 0 22px var(--neon-green-glow);
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.45), rgba(5, 150, 105, 0.35));
+    }
+
+    .btn-icon-only {
+      width: 42px;
+      height: 42px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-sm);
+    }
+
+    /* Main Container */
+    .main-wrapper {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 1.5rem 2rem 4rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* HUD Top Status Bar */
+    .hud-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      background: var(--bg-surface);
+      backdrop-filter: blur(12px);
+      padding: 1rem 1.5rem;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .hud-stat-box {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      border-right: 1px solid rgba(255, 255, 255, 0.07);
+      padding-right: 1rem;
+    }
+
+    .hud-stat-box:last-child {
+      border-right: none;
+    }
+
+    .stat-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-sm);
+      background: rgba(0, 243, 255, 0.08);
+      border: 1px solid rgba(0, 243, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--neon-cyan);
+    }
+
+    .stat-content .stat-label {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+    }
+
+    .stat-content .stat-value {
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--text-main);
+      letter-spacing: 0.5px;
+    }
+
+    .stat-value.timer-pulse {
+      color: var(--neon-cyan);
+      text-shadow: 0 0 10px var(--neon-cyan-glow);
+    }
+
+    .stat-value.timer-urgent {
+      color: var(--neon-red);
+      text-shadow: 0 0 12px var(--neon-red-glow);
+      animation: urgentPulse 0.6s infinite alternate;
+    }
+
+    @keyframes urgentPulse {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(1.06); opacity: 0.8; }
+    }
+
+    /* Phase Banners */
+    .phase-banner {
+      border-radius: var(--radius-md);
+      padding: 1.25rem 1.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 1px solid;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .phase-banner.memorize-phase {
+      background: linear-gradient(90deg, rgba(168, 85, 247, 0.18), rgba(0, 243, 255, 0.1));
+      border-color: var(--neon-purple);
+      box-shadow: 0 0 30px rgba(168, 85, 247, 0.15);
+    }
+
+    .phase-banner.rebuild-phase {
+      background: linear-gradient(90deg, rgba(0, 243, 255, 0.18), rgba(16, 185, 129, 0.08));
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 30px rgba(0, 243, 255, 0.15);
+    }
+
+    .phase-banner.executing-phase {
+      background: linear-gradient(90deg, rgba(16, 185, 129, 0.2), rgba(0, 243, 255, 0.15));
+      border-color: var(--neon-green);
+      box-shadow: 0 0 30px rgba(16, 185, 129, 0.2);
+    }
+
+    .phase-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .phase-tag {
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      letter-spacing: 2px;
+      color: var(--neon-cyan);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .phase-heading {
+      font-family: var(--font-display);
+      font-size: 1.45rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+
+    .phase-instruction {
+      font-family: var(--font-ui);
+      font-size: 1.05rem;
+      color: var(--text-dim);
+    }
+
+    /* Radar Scan Line effect during Study Phase */
+    .memorize-scanner {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: var(--neon-purple);
+      box-shadow: 0 0 25px 8px var(--neon-purple);
+      animation: radarScan 3s infinite linear;
+      pointer-events: none;
+    }
+
+    @keyframes radarScan {
+      0% { left: -10px; opacity: 0.8; }
+      50% { opacity: 1; }
+      100% { left: 102%; opacity: 0.8; }
+    }
+
+    /* Pipeline Track & Flow Visualization */
+    .pipeline-arena {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      position: relative;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .arena-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 1rem;
+    }
+
+    .arena-title {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      letter-spacing: 1px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .pipeline-diagram {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+      align-items: stretch;
+      position: relative;
+    }
+
+    /* Pipeline Connecting Cable */
+    .pipeline-wire {
+      position: absolute;
+      top: 48px;
+      left: 30px;
+      right: 30px;
+      height: 3px;
+      background: rgba(0, 243, 255, 0.2);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .pipeline-wire::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+      animation: wirePulse 2.5s infinite linear;
+    }
+
+    @keyframes wirePulse {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    /* Target Drop zones */
+    .pipeline-slot {
+      background: rgba(11, 19, 36, 0.8);
+      border: 2px dashed rgba(0, 243, 255, 0.25);
+      border-radius: var(--radius-md);
+      min-height: 200px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      transition: var(--transition-smooth);
+      z-index: 2;
+      cursor: pointer;
+    }
+
+    .pipeline-slot.slot-empty:hover {
+      border-color: var(--neon-cyan);
+      background: rgba(0, 243, 255, 0.05);
+      box-shadow: 0 0 20px rgba(0, 243, 255, 0.15) inset;
+    }
+
+    .pipeline-slot.drag-over {
+      border-color: var(--neon-green) !important;
+      border-style: solid !important;
+      background: rgba(16, 185, 129, 0.12) !important;
+      transform: scale(1.02);
+      box-shadow: 0 0 25px rgba(16, 185, 129, 0.3) !important;
+    }
+
+    .slot-index-badge {
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #090d19;
+      border: 1px solid var(--neon-cyan);
+      color: var(--neon-cyan);
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.2rem 0.6rem;
+      border-radius: 12px;
+      z-index: 3;
+    }
+
+    .slot-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      color: rgba(148, 163, 184, 0.5);
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .slot-placeholder-icon {
+      width: 38px;
+      height: 38px;
+      opacity: 0.4;
+    }
+
+    .slot-placeholder-text {
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    /* Stage Card */
+    .stage-card {
+      width: 100%;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 1.1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      cursor: grab;
+      position: relative;
+      transition: all var(--transition-fast);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .stage-card:active {
+      cursor: grabbing;
+    }
+
+    .stage-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--neon-cyan);
+      box-shadow: 0 8px 25px rgba(0, 243, 255, 0.25);
+    }
+
+    .stage-card.dragging {
+      opacity: 0.45;
+      transform: scale(0.95);
+      border-color: var(--neon-amber);
+    }
+
+    .stage-card.study-view {
+      cursor: default;
+      border-color: rgba(168, 85, 247, 0.4);
+    }
+
+    .stage-card.study-view:hover {
+      transform: none;
+      border-color: var(--neon-purple);
+      box-shadow: 0 0 20px var(--neon-purple-glow);
+    }
+
+    /* Execution Status Highlights */
+    .stage-card.exec-active {
+      border-color: var(--neon-amber) !important;
+      box-shadow: 0 0 30px var(--neon-amber-glow) !important;
+      animation: execPulse 0.8s infinite alternate;
+    }
+
+    .stage-card.exec-success {
+      border-color: var(--neon-green) !important;
+      box-shadow: 0 0 25px var(--neon-green-glow) !important;
+      background: linear-gradient(145deg, rgba(16, 185, 129, 0.15), var(--bg-surface-elevated)) !important;
+    }
+
+    .stage-card.exec-failure {
+      border-color: var(--neon-red) !important;
+      box-shadow: 0 0 30px var(--neon-red-glow) !important;
+      background: linear-gradient(145deg, rgba(239, 68, 68, 0.2), var(--bg-surface-elevated)) !important;
+    }
+
+    @keyframes execPulse {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.03); }
+    }
+
+    .stage-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .stage-tag {
+      font-family: var(--font-display);
+      font-size: 0.65rem;
+      letter-spacing: 1px;
+      font-weight: 700;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .stage-icon-wrap {
+      width: 34px;
+      height: 34px;
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--neon-cyan);
+    }
+
+    .stage-title {
+      font-family: var(--font-ui);
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.25;
+    }
+
+    .stage-desc {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      line-height: 1.4;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    .stage-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 0.5rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .stage-order-preview {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--neon-cyan);
+    }
+
+    .btn-remove-slot {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: 0.2rem;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      transition: var(--transition-fast);
+    }
+
+    .btn-remove-slot:hover {
+      color: var(--neon-red);
+      background: rgba(239, 68, 68, 0.15);
+    }
+
+    /* Shuffled Inventory / Staging Pool */
+    .pool-section {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .pool-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .pool-title {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      color: #fff;
+      letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .pool-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1.25rem;
+      min-height: 120px;
+      padding: 0.5rem;
+      border-radius: var(--radius-md);
+      background: rgba(6, 11, 22, 0.4);
+    }
+
+    .pool-empty-state {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      color: var(--neon-green);
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      letter-spacing: 1px;
+      gap: 0.5rem;
+    }
+
+    /* Terminal Console */
+    .terminal-drawer {
+      background: #050811;
+      border: 1px solid rgba(0, 243, 255, 0.3);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      margin-top: 1rem;
+    }
+
+    .terminal-header {
+      background: #0a0e1c;
+      padding: 0.6rem 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .terminal-dots {
+      display: flex;
+      gap: 6px;
+    }
+
+    .terminal-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .terminal-dot.red { background: #ef4444; }
+    .terminal-dot.yellow { background: #f59e0b; }
+    .terminal-dot.green { background: #10b981; }
+
+    .terminal-title {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--neon-cyan);
+      letter-spacing: 0.5px;
+    }
+
+    .terminal-body {
+      height: 180px;
+      overflow-y: auto;
+      padding: 1rem 1.25rem;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      line-height: 1.6;
+      color: #cbd5e1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      background: rgba(3, 7, 18, 0.95);
+    }
+
+    .terminal-line {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      animation: fadeIn 0.2s ease forwards;
+    }
+
+    .terminal-line.success { color: var(--neon-green); }
+    .terminal-line.error { color: var(--neon-red); }
+    .terminal-line.warn { color: var(--neon-amber); }
+    .terminal-line.info { color: var(--neon-cyan); }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(3px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Modal Dialogs */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(4, 7, 16, 0.85);
+      backdrop-filter: blur(14px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--transition-smooth);
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-content {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-bright);
+      box-shadow: 0 0 50px rgba(0, 243, 255, 0.2);
+      border-radius: var(--radius-lg);
+      max-width: 680px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 2.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      position: relative;
+      transform: translateY(20px) scale(0.96);
+      transition: transform var(--transition-smooth);
+    }
+
+    .modal-overlay.active .modal-content {
+      transform: translateY(0) scale(1);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 1rem;
+    }
+
+    .modal-title {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      background: linear-gradient(135deg, #fff 40%, var(--neon-cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .modal-close-btn {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 1.5rem;
+      line-height: 1;
+      transition: var(--transition-fast);
+    }
+
+    .modal-close-btn:hover {
+      color: #fff;
+      transform: scale(1.1);
+    }
+
+    /* Call-sign Input */
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .input-label {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--neon-cyan);
+      letter-spacing: 1px;
+    }
+
+    .cyber-input {
+      background: rgba(6, 11, 24, 0.8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 0.85rem 1.25rem;
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      color: #fff;
+      letter-spacing: 1px;
+      outline: none;
+      transition: var(--transition-fast);
+    }
+
+    .cyber-input:focus {
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 16px var(--neon-cyan-glow);
+    }
+
+    /* Leaderboard List */
+    .leaderboard-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+    }
+
+    .leaderboard-table th {
+      text-align: left;
+      padding: 0.75rem 1rem;
+      color: var(--neon-cyan);
+      border-bottom: 1px solid rgba(0, 243, 255, 0.2);
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+
+    .leaderboard-table td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      color: #cbd5e1;
+    }
+
+    .leaderboard-table tr:hover td {
+      background: rgba(0, 243, 255, 0.05);
+    }
+
+    .rank-badge {
+      display: inline-block;
+      width: 26px;
+      height: 26px;
+      line-height: 26px;
+      text-align: center;
+      border-radius: 50%;
+      font-weight: 700;
+      font-family: var(--font-display);
+      font-size: 0.8rem;
+    }
+
+    .rank-1 { background: #f59e0b; color: #000; box-shadow: 0 0 10px rgba(245, 158, 11, 0.5); }
+    .rank-2 { background: #94a3b8; color: #000; }
+    .rank-3 { background: #b45309; color: #fff; }
+
+    /* Result Score Showcase */
+    .score-showcase {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      text-align: center;
+      margin: 1rem 0;
+    }
+
+    .score-box {
+      background: rgba(10, 17, 34, 0.85);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 1.25rem 0.5rem;
+    }
+
+    .score-box-title {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      font-family: var(--font-mono);
+    }
+
+    .score-box-val {
+      font-family: var(--font-display);
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--neon-cyan);
+      margin-top: 0.25rem;
+    }
+
+    .score-box-val.total-val {
+      color: var(--neon-green);
+      text-shadow: 0 0 12px var(--neon-green-glow);
+    }
+
+    /* Confetti particles canvas */
+    #confetti-canvas {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2000;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .app-header {
+        padding: 1rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+      .main-wrapper {
+        padding: 1rem;
+      }
+      .pipeline-diagram {
+        grid-template-columns: 1fr;
+      }
+      .pipeline-wire {
+        display: none;
+      }
+    }
+      .toast-container{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:300;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+    .toast{background:rgba(14,22,41,.95);border:1px solid var(--neon-amber);color:var(--text-main);padding:.7rem 1.2rem;border-radius:var(--radius-sm);font-weight:700;letter-spacing:.5px;box-shadow:0 0 18px var(--neon-amber-glow);animation:fadeIn .25s ease}
+    .stage-card.selected-swap{outline:2px dashed var(--neon-amber);outline-offset:3px}
+    @media (prefers-reduced-motion: reduce){*{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}.cyber-scanlines{display:none}}
+      /* ===== Portrait trading-card redesign + animations ===== */
+    .pipeline-diagram{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem}
+    .pipeline-slot{aspect-ratio:5/7;min-height:0;padding:.4rem}
+    .pipeline-slot.slot-empty{animation:breathe 2.4s ease-in-out infinite}
+    .pipeline-slot.snap{animation:snapIn .4s cubic-bezier(.2,1.6,.4,1)}
+    .slot-placeholder-text{font-size:.7rem;text-align:center}
+    .stage-card{--c:#00f3ff;width:100%;height:100%;aspect-ratio:5/7;overflow:hidden;align-items:center;text-align:center;justify-content:space-between;padding:.8rem .6rem;gap:.4rem;
+      background:linear-gradient(160deg,color-mix(in srgb,var(--c) 24%,#0b1324),#0b1324 72%);border-color:color-mix(in srgb,var(--c) 55%,transparent);
+      transform:perspective(700px) translateY(var(--ty,0px)) rotate(var(--r,0deg)) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .18s ease,box-shadow .2s ease}
+    .stage-card:hover{--ty:-8px;box-shadow:0 14px 30px rgba(0,0,0,.5),0 0 22px color-mix(in srgb,var(--c) 50%,transparent)}
+    .stage-card::after{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at var(--mx,50%) var(--my,0%),rgba(255,255,255,.22),transparent 55%);opacity:0;transition:opacity .2s}
+    .stage-card:hover::after{opacity:1}
+    .stage-card-header{display:contents}
+    .stage-tag{order:0;font-size:.58rem}
+    .stage-icon-wrap{order:1;width:64px;height:64px;margin:auto;border-radius:50%;background:color-mix(in srgb,var(--c) 15%,transparent);box-shadow:0 0 22px color-mix(in srgb,var(--c) 45%,transparent)}
+    .stage-icon-wrap svg{width:34px;height:34px}
+    .stage-title{order:2;font-size:.95rem}
+    .stage-desc{order:3;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:.9rem;font-size:.78rem;background:rgba(6,9,19,.94);opacity:0;transition:opacity .2s;pointer-events:none}
+    .stage-card:hover .stage-desc{opacity:1}
+    .stage-footer{position:absolute;top:6px;right:6px;padding:0;border:0;z-index:2}
+    .stage-order-preview{display:none}
+    .pool-grid{display:flex;flex-wrap:wrap;justify-content:center;gap:1rem;padding:1.4rem .5rem}
+    .pool-grid .stage-card{width:150px;height:auto;flex:0 0 150px}
+    .pool-grid .stage-card:hover{--r:0deg;--ty:-20px;transform:perspective(700px) translateY(-20px) scale(1.07) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));z-index:5}
+    .stage-card.deal{animation:dealIn .55s cubic-bezier(.2,1.2,.4,1) backwards}
+    .stage-card.flip-in{animation:flipIn .7s ease backwards}
+    .stage-card.win-wave{animation:winWave .8s ease 2}
+    .pipeline-diagram.shake{animation:shake .45s}
+    @keyframes dealIn{from{opacity:0;transform:translateY(-120px) rotate(-18deg) scale(.6)}}
+    @keyframes flipIn{from{opacity:0;transform:perspective(700px) rotateY(90deg) scale(.8)}}
+    @keyframes snapIn{0%{transform:scale(.85)}60%{transform:scale(1.07);box-shadow:0 0 28px var(--neon-cyan-glow)}100%{transform:scale(1)}}
+    @keyframes breathe{0%,100%{border-color:rgba(0,243,255,.2)}50%{border-color:rgba(0,243,255,.6);box-shadow:0 0 14px rgba(0,243,255,.18)}}
+    @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-10px)}40%{transform:translateX(9px)}60%{transform:translateX(-6px)}80%{transform:translateX(4px)}}
+    @keyframes winWave{0%,100%{transform:translateY(0)}50%{transform:translateY(-22px) scale(1.07);box-shadow:0 0 34px var(--neon-green-glow)}}
+    @media (max-width:600px){.pipeline-diagram{grid-template-columns:repeat(auto-fit,minmax(110px,1fr))}.pool-grid .stage-card{width:120px;flex-basis:120px}.stage-icon-wrap{width:48px;height:48px}.stage-title{font-size:.8rem}}
+  </style>
+</head>
+<body>
+  <!-- Scanline CRT visual effect -->
+  <div class="cyber-scanlines"></div>
+
+  <!-- Confetti canvas for victory celebrations -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="brand-wrapper">
+      <div class="brand-badge">TECHVERSE '26</div>
+      <div class="app-title-group">
+        <h1>DEVOPS ARENA : PIPELINE RECALL</h1>
+        <div class="app-subtitle">ROUND 2 OF 3 &bull; PRODUCTION RESCUE MISSION &bull; 150 PTS</div>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <!-- Mission dropdown -->
+      <button id="btn-select-mission" class="btn-cyber" title="Select Mission">
+        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+        <span id="header-mission-name">Mission 2: Cloud Enterprise</span>
+      </button>
+
+      <!-- Rules / Tutorial -->
+      <button id="btn-rules" class="btn-cyber btn-icon-only" title="Game Rules & DevOps Guide">
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      </button>
+
+      <!-- Leaderboard -->
+      <button id="btn-leaderboard" class="btn-cyber btn-icon-only" title="Live Leaderboard">
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+      </button>
+
+      <!-- Sound Toggle -->
+      <button id="btn-sound" class="btn-cyber btn-icon-only" title="Sound FX Toggle">
+        <svg id="sound-icon-on" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
+        <svg id="sound-icon-off" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display:none;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"></path></svg>
+      </button>
+
+      <!-- Fullscreen Toggle for Projector/Competition -->
+      <button id="btn-fullscreen" class="btn-cyber btn-icon-only" title="Toggle Fullscreen">
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main View -->
+  <main class="main-wrapper">
+    <!-- Heads-Up Display (HUD) Status Stats -->
+    <section class="hud-bar">
+      <!-- Player Nickname -->
+      <div class="hud-stat-box">
+        <div class="stat-icon">
+          <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">OPERATOR CALL-SIGN</div>
+          <div id="hud-player-name" class="stat-value">DEV-01</div>
+        </div>
+      </div>
+
+      <!-- Current Phase Indicator -->
+      <div class="hud-stat-box">
+        <div class="stat-icon">
+          <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">CURRENT PHASE</div>
+          <div id="hud-phase-name" class="stat-value">STANDBY</div>
+        </div>
+      </div>
+
+      <!-- Countdown Clock -->
+      <div class="hud-stat-box">
+        <div class="stat-icon">
+          <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">COUNTDOWN CLOCK</div>
+          <div id="hud-timer" class="stat-value timer-pulse">00:00</div>
+        </div>
+      </div>
+
+      <!-- Potential / Target Points -->
+      <div class="hud-stat-box">
+        <div class="stat-icon">
+          <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">ROUND 2 SCORE VALUE</div>
+          <div id="hud-score-value" class="stat-value">150 PTS</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Dynamic Phase Banner -->
+    <section id="phase-banner" class="phase-banner memorize-phase">
+      <div id="memorize-scanner" class="memorize-scanner"></div>
+      <div class="phase-title-group">
+        <div id="phase-tag" class="phase-tag">
+          <span class="pulse-dot"></span>
+          PHASE 1: MEMORIZATION SCAN
+        </div>
+        <div id="phase-heading" class="phase-heading">STUDY THE DEPLOYMENT PIPELINE</div>
+        <div id="phase-instruction" class="phase-instruction">Observe the exact execution order of CI/CD stages. You have 18 seconds before configuration scrambles.</div>
+      </div>
+
+      <div class="phase-actions">
+        <button id="btn-skip-memorize" class="btn-cyber primary">
+          <span>I'VE MEMORIZED IT &bull; SKIP (+SPEED BONUS)</span>
+          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg>
+        </button>
+
+        <button id="btn-execute-pipeline" class="btn-cyber accent-green" style="display:none;">
+          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          <span>EXECUTE & VERIFY PIPELINE</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Pipeline Architecture Arena (Target Drop Slots) -->
+    <section class="pipeline-arena">
+      <div class="arena-header">
+        <div class="arena-title">
+          <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+          <span>ACTIVE CI/CD PIPELINE EXECUTION SEQUENCE</span>
+        </div>
+        <div class="arena-tools">
+          <button id="btn-clear-pipeline" class="btn-cyber" style="display:none; font-size: 0.8rem; padding: 0.4rem 0.8rem;">
+            RESET SLOTS
+          </button>
+        </div>
+      </div>
+
+      <!-- Glowing horizontal cable connector behind slots -->
+      <div class="pipeline-wire"></div>
+
+      <!-- Target Drop Grid -->
+      <div id="pipeline-slots-container" class="pipeline-diagram"></div>
+    </section>
+
+    <!-- Shuffled Inventory Pool -->
+    <section id="pool-section" class="pool-section" style="display:none;">
+      <div class="pool-header">
+        <div class="pool-title">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7c-2 0-3 1-3 3z"></path></svg>
+          <span>SHUFFLED PIPELINE STAGES (DRAG OR CLICK TO ASSIGN)</span>
+        </div>
+        <div id="pool-count" class="stage-tag" style="background: rgba(0, 243, 255, 0.15); color: var(--neon-cyan);">
+          6 STAGES UNASSIGNED
+        </div>
+      </div>
+
+      <div id="pool-container" class="pool-grid"></div>
+    </section>
+
+    <!-- Integrated CI/CD Terminal Console -->
+    <section class="terminal-drawer">
+      <div class="terminal-header">
+        <div class="terminal-dots">
+          <span class="terminal-dot red"></span>
+          <span class="terminal-dot yellow"></span>
+          <span class="terminal-dot green"></span>
+        </div>
+        <div class="terminal-title">techverse-runner-01@ci-agent: ~/pipeline-rescue/release.yaml</div>
+        <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-dim);">SHELL: BASH v5.2</div>
+      </div>
+      <div id="terminal-body" class="terminal-body">
+        <div class="terminal-line info">[INIT] Techverse CI/CD Runner initialized. Daemon ready on socket /var/run/docker.sock</div>
+        <div class="terminal-line">[INFO] Waiting for pipeline configuration matrix trigger...</div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- Modal 1: Mission Briefing / Player Setup -->
+  <div id="modal-briefing" class="modal-overlay active">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <div class="brand-badge" style="display:inline-block; margin-bottom: 0.5rem;">MISSION BRIEFING</div>
+          <h2 class="modal-title">ROUND 2: PIPELINE RECALL</h2>
+        </div>
+      </div>
+
+      <div style="font-size: 1rem; line-height: 1.6; color: #cbd5e1;">
+        <p><strong style="color: var(--neon-cyan);">The Incident:</strong> During a critical deployment at the Techverse enterprise platform, a server migration glitch corrupted the CI/CD pipeline configuration!</p>
+        <p style="margin-top: 0.75rem;"><strong style="color: var(--neon-green);">Your Mission:</strong> Study the architected deployment pipeline for 15-20 seconds. Once the timer expires, the stages will scramble. Reconstruct them into the exact sequence before the production servers crash.</p>
+      </div>
+
+      <div class="input-group">
+        <label class="input-label" for="input-player-name">ENTER JUNIOR SRE CALL-SIGN / NICKNAME:</label>
+        <input type="text" id="input-player-name" class="cyber-input" value="DevOpsRookie" maxlength="15" autocomplete="off" placeholder="e.g. Neo, CyberAce, Zero">
+      </div>
+
+      <div class="input-group">
+        <label class="input-label">SELECT MISSION LEVEL:</label>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;" id="briefing-level-picker"></div>
+      </div>
+
+      <div style="background: rgba(0, 243, 255, 0.05); border: 1px dashed var(--border-subtle); padding: 1rem; border-radius: var(--radius-sm); font-size: 0.85rem; color: var(--text-dim);">
+        <strong style="color: #fff;">Scoring Rubric:</strong>
+        <ul style="margin-left: 1.25rem; margin-top: 0.35rem;">
+          <li>100 Base Points for 100% correct pipeline sequence.</li>
+          <li>Up to +50 Speed Bonus for rapid reconstruction and early memorization skip.</li>
+          <li>Max Round Score: <strong style="color: var(--neon-green);">150 Points</strong> (Feeds into live Techverse Leaderboard).</li>
+        </ul>
+      </div>
+
+      <button id="btn-start-mission" class="btn-cyber primary" style="padding: 1rem; justify-content: center; font-size: 1.1rem;">
+        <span>START MISSION &bull; BEGIN MEMORIZATION SCAN</span>
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal 2: Victory / Score Summary -->
+  <div id="modal-result" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <div id="result-status-badge" class="brand-badge" style="border-color: var(--neon-green); color: var(--neon-green);">
+            PRODUCTION RESCUED
+          </div>
+          <h2 id="result-title" class="modal-title">PIPELINE VERIFIED HEALTHY!</h2>
+        </div>
+      </div>
+
+      <p id="result-message" style="color: #cbd5e1; font-size: 1.05rem; line-height: 1.5;">
+        All automated deployment stages passed verification without downtime. Production traffic is fully healthy.
+      </p>
+
+      <div class="score-showcase">
+        <div class="score-box">
+          <div class="score-box-title">ACCURACY</div>
+          <div id="score-accuracy" class="score-box-val">100%</div>
+        </div>
+        <div class="score-box">
+          <div class="score-box-title">SPEED BONUS</div>
+          <div id="score-speed" class="score-box-val">+38</div>
+        </div>
+        <div class="score-box">
+          <div class="score-box-title">TOTAL ROUND SCORE</div>
+          <div id="score-total" class="score-box-val total-val">138 / 150</div>
+        </div>
+      </div>
+
+      <div id="result-time-detail" style="font-family: var(--font-mono); font-size: 0.9rem; text-align: center; color: var(--text-dim);">
+        Completed in 24.3 seconds &bull; Zero configuration collisions
+      </div>
+
+      <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
+        <button id="btn-replay" class="btn-cyber" style="flex: 1; justify-content: center;">
+          REPLAY MISSION
+        </button>
+        <button id="btn-view-leaderboard-from-result" class="btn-cyber primary" style="flex: 1; justify-content: center;">
+          VIEW LEADERBOARD
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Leaderboard Modal -->
+  <div id="modal-leaderboard" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <div class="brand-badge">EVENT STANDINGS</div>
+          <h2 class="modal-title">ROUND 2 LIVE LEADERBOARD</h2>
+        </div>
+        <button class="modal-close-btn" data-close="modal-leaderboard">&times;</button>
+      </div>
+
+      <div style="max-height: 340px; overflow-y: auto;">
+        <table class="leaderboard-table">
+          <thead>
+            <tr>
+              <th>RANK</th>
+              <th>OPERATOR</th>
+              <th>MISSION</th>
+              <th>TIME</th>
+              <th>SCORE</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-body"></tbody>
+        </table>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 1rem;">
+        <button id="btn-clear-leaderboard" class="btn-cyber" style="font-size: 0.8rem; color: var(--neon-red);">
+          CLEAR SCORES
+        </button>
+        <button class="btn-cyber primary modal-close-trigger" data-close="modal-leaderboard">
+          CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 4: Rules & DevOps Primer -->
+  <div id="modal-rules" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <div class="brand-badge">DEVOPS PRIMER</div>
+          <h2 class="modal-title">WHAT IS A CI/CD PIPELINE?</h2>
+        </div>
+        <button class="modal-close-btn" data-close="modal-rules">&times;</button>
+      </div>
+
+      <div style="font-size: 0.95rem; line-height: 1.6; color: #cbd5e1; display: flex; flex-direction: column; gap: 0.75rem;">
+        <p>In modern software engineering, a <strong>CI/CD (Continuous Integration / Continuous Deployment) pipeline</strong> is the automated highway that takes code written by developers and safely puts it in front of millions of users.</p>
+        <div style="background: rgba(0, 243, 255, 0.05); padding: 0.85rem; border-left: 3px solid var(--neon-cyan); border-radius: 4px;">
+          <strong>Why Sequence Matters:</strong><br>
+          You cannot test code before fetching it, you cannot scan a container image before building it, and you must never deploy to production before passing quality gates!
+        </div>
+        <p><strong>Standard Pipeline Order:</strong></p>
+        <ol style="margin-left: 1.25rem;">
+          <li><strong style="color: var(--neon-cyan);">Source / Commit:</strong> Code changes are pushed and cryptographically signed.</li>
+          <li><strong style="color: var(--neon-purple);">Quality & SAST:</strong> Automated linters, unit tests, and security scans run.</li>
+          <li><strong style="color: #3b82f6;">Build & Artifact:</strong> Docker containers and Helm charts are compiled.</li>
+          <li><strong style="color: var(--neon-amber);">Vulnerability Audit:</strong> Container CVEs and dependencies are verified.</li>
+          <li><strong style="color: var(--neon-green);">Staging & Production:</strong> Automated deployment with health probes and zero downtime.</li>
+        </ol>
+      </div>
+
+      <button class="btn-cyber primary modal-close-trigger" data-close="modal-rules" style="justify-content: center;">
+        UNDERSTOOD &bull; READY TO RESCUE
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== EMBEDDED JAVASCRIPT GAME ENGINE ==================== -->
+  <script>
+    /* Sound FX Engine via Web Audio API - Zero External Dependencies */
+    class SoundFX {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      toggleMute() {
+        this.muted = !this.muted;
+        return this.muted;
+      }
+      playClick() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(400, this.ctx.currentTime + 0.05);
+        gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.05);
+      }
+      playSnap() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(950, this.ctx.currentTime + 0.08);
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.08);
+      }
+      playTick() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1200, this.ctx.currentTime);
+        gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.03);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.03);
+      }
+      playAlert() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.setValueAtTime(880, now + 0.1);
+        osc.frequency.setValueAtTime(440, now + 0.2);
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.35);
+      }
+      playSuccess() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        const notes = [523.25, 659.25, 783.99, 1046.5];
+        notes.forEach((freq, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          const start = this.ctx.currentTime + i * 0.09;
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, start);
+          gain.gain.setValueAtTime(0.2, start);
+          gain.gain.exponentialRampToValueAtTime(0.01, start + 0.25);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(start);
+          osc.stop(start + 0.25);
+        });
+      }
+      playError() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(180, now);
+        osc.frequency.linearRampToValueAtTime(90, now + 0.3);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      }
+      playStepPass() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const now = this.ctx.currentTime;
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.exponentialRampToValueAtTime(1200, now + 0.12);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.12);
+      }
+    }
+    const soundFX = new SoundFX();
+
+    /* Levels & CI/CD Pipeline Stages Definitions */
+    const PIPELINE_LEVELS = [
+      {
+        id: "hotfix",
+        name: "Mission 1: Rapid Microservice Hotfix",
+        difficulty: "Standard (4 Stages)",
+        badge: "FAST TRACK",
+        memorizeTime: 15,
+        rebuildTime: 45,
+        maxPoints: 150,
+        scenario: "Production API response times spiked to 12s due to a connection pool leak. The patch is ready on dev branch. Memorize and reconstruct the hotfix delivery pipeline before the shopping gateway crashes!",
+        stages: [
+          {
+            id: "git_push",
+            order: 1,
+            title: "1. Git Push & Commit",
+            category: "SOURCE",
+            categoryColor: "#00f3ff",
+            icon: "commit",
+            description: "Developer pushes patch commit with signed cryptographic hash to the main repository branch.",
+            terminalLogs: [
+              "[git] Fetching origin/main...",
+              "[git] Commit verified: 9f4e2b1 (Fix connection pool leak)",
+              "[git] Triggering webhook: ci.techverse.internal"
+            ]
+          },
+          {
+            id: "unit_test",
+            order: 2,
+            title: "2. Unit Tests & Linting",
+            category: "QUALITY",
+            categoryColor: "#a855f7",
+            icon: "flask",
+            description: "Executes ESLint and Jest unit test suite to guarantee code compliance and prevent regressions.",
+            terminalLogs: [
+              "[lint] ESLint checks completed: 0 errors, 0 warnings",
+              "[test] Running Jest test suites (48 passed, 0 failed)",
+              "[test] Coverage: 94.6% statements, 91.2% branches"
+            ]
+          },
+          {
+            id: "docker_build",
+            order: 3,
+            title: "3. Docker Image Build",
+            category: "BUILD",
+            categoryColor: "#3b82f6",
+            icon: "box",
+            description: "Compiles container image with multi-stage Dockerfile and pushes to private Harbor registry.",
+            terminalLogs: [
+              "[docker] Step 1/8: FROM node:20-alpine AS builder",
+              "[docker] Step 5/8: RUN npm run build --release",
+              "[docker] Pushing registry.techverse.io/api-service:v2.4.1 (SHA: a71bc8)"
+            ]
+          },
+          {
+            id: "cluster_deploy",
+            order: 4,
+            title: "4. Rolling Cluster Deploy",
+            category: "DEPLOY",
+            categoryColor: "#10b981",
+            icon: "cloud",
+            description: "Orchestrates zero-downtime rolling update across Kubernetes pods with active health probes.",
+            terminalLogs: [
+              "[k8s] Applying deployment manifest: k8s/production-api.yaml",
+              "[k8s] Rolling update: 6/6 pods in Running state (healthy)",
+              "[success] Traffic shifted! Latency normalized to 18ms. OUTAGE RESOLVED!"
+            ]
+          }
+        ]
+      },
+      {
+        id: "enterprise",
+        name: "Mission 2: Cloud Enterprise CI/CD",
+        difficulty: "Tournament Mode (6 Stages)",
+        badge: "OFFICIAL ROUND",
+        memorizeTime: 18,
+        rebuildTime: 60,
+        maxPoints: 150,
+        scenario: "Techverse FinTech platform core banking release. Must pass rigorous security scans, compliance auditing, and automated container orchestration before live traffic switch.",
+        stages: [
+          {
+            id: "pr_merge",
+            order: 1,
+            title: "1. Pull Request Approval",
+            category: "SOURCE",
+            categoryColor: "#00f3ff",
+            icon: "git-pull",
+            description: "Peer review approvals validated with signed branch protection rules and secret leak detection.",
+            terminalLogs: [
+              "[github] PR #1402: 2/2 Senior approvals confirmed",
+              "[gitleaks] Scanning commit diff for exposed tokens... Clean",
+              "[ci] Branch protection verified. Pipeline triggered."
+            ]
+          },
+          {
+            id: "sonarqube",
+            order: 2,
+            title: "2. SonarQube SAST & Quality Gate",
+            category: "SECURITY",
+            categoryColor: "#ec4899",
+            icon: "shield",
+            description: "Static Application Security Testing checks for OWASP vulnerabilities and code quality score.",
+            terminalLogs: [
+              "[sonarqube] Scanning 42,500 lines of source code...",
+              "[sonarqube] Vulnerabilities: 0 | Bugs: 0 | Security Rating: A",
+              "[quality-gate] STATUS: PASSED (Quality gate threshold met)"
+            ]
+          },
+          {
+            id: "container_build",
+            order: 3,
+            title: "3. Build Optimized Container",
+            category: "BUILD",
+            categoryColor: "#3b82f6",
+            icon: "box",
+            description: "Packages application with multi-stage build, strips debug symbols, and generates SBOM manifest.",
+            terminalLogs: [
+              "[build] Multi-stage build initiated for arm64/amd64",
+              "[sbom] Generating CycloneDX software bill of materials",
+              "[registry] Digest: sha256:8894df012e8b... tagged 'prod-release-v4.0'"
+            ]
+          },
+          {
+            id: "trivy_scan",
+            order: 4,
+            title: "4. Trivy Container Vulnerability Scan",
+            category: "SECURITY",
+            categoryColor: "#f59e0b",
+            icon: "search-code",
+            description: "Deep binary and package scan against CVE databases to ensure zero high/critical vulnerabilities.",
+            terminalLogs: [
+              "[trivy] Inspecting OS packages and Node modules...",
+              "[trivy] Total: 418 packages scanned",
+              "[trivy] 0 CRITICAL, 0 HIGH. Image security clearance granted."
+            ]
+          },
+          {
+            id: "staging_tests",
+            order: 5,
+            title: "5. Staging Integration Tests",
+            category: "TEST",
+            categoryColor: "#a855f7",
+            icon: "check-circle",
+            description: "Deploys to ephemeral staging environment and triggers synthetic end-to-end integration flows.",
+            terminalLogs: [
+              "[staging] Ephemeral environment ephemeral-pr-1402 ready",
+              "[cypress] Running 32 end-to-end payment test scenarios...",
+              "[cypress] All 32 suites passed (100% assertions verified)"
+            ]
+          },
+          {
+            id: "blue_green",
+            order: 6,
+            title: "6. Production Blue/Green Switch",
+            category: "DEPLOY",
+            categoryColor: "#10b981",
+            icon: "zap",
+            description: "Switches ingress load balancer from Blue environment to Green with zero downtime and instant rollback capability.",
+            terminalLogs: [
+              "[ingress] Warm-up green fleet target groups...",
+              "[ingress] Switching 100% ingress routing to Green fleet",
+              "[alert] Telemetry nominal: 0 HTTP 5xx errors recorded. RELEASE LIVE!"
+            ]
+          }
+        ]
+      },
+      {
+        id: "sre_master",
+        name: "Mission 3: Zero-Downtime Canary SRE",
+        difficulty: "Extreme SRE (8 Stages)",
+        badge: "HARDCORE",
+        memorizeTime: 20,
+        rebuildTime: 75,
+        maxPoints: 150,
+        scenario: "High-frequency transaction service. Requires progressive canary deployment, Prometheus SLO telemetry validation, and automated rollouts.",
+        stages: [
+          {
+            id: "git_tag",
+            order: 1,
+            title: "1. Semantic Version Tagging",
+            category: "SOURCE",
+            categoryColor: "#00f3ff",
+            icon: "tag",
+            description: "Automated release tag created following SemVer specification with signed GPG keys.",
+            terminalLogs: [
+              "[release] Tagged v3.12.0 via semantic-release",
+              "[git] Release notes auto-generated and published to changelog"
+            ]
+          },
+          {
+            id: "secret_scan",
+            order: 2,
+            title: "2. Secrets & SAST Audit",
+            category: "SECURITY",
+            categoryColor: "#ec4899",
+            icon: "shield",
+            description: "Verifies zero leaked API keys, tokens, or security flaws in source code before build starts.",
+            terminalLogs: [
+              "[audit] TruffleHog scan: 0 secrets discovered",
+              "[audit] Semgrep static rules: 100% clean"
+            ]
+          },
+          {
+            id: "multiarch_build",
+            order: 3,
+            title: "3. Multi-Arch Container Build",
+            category: "BUILD",
+            categoryColor: "#3b82f6",
+            icon: "layers",
+            description: "BuildKit builds multi-architecture container images for both Linux ARM64 and AMD64 nodes.",
+            terminalLogs: [
+              "[buildx] Building for linux/amd64 and linux/arm64",
+              "[buildx] Image pushed: registry.techverse.io/core:v3.12.0"
+            ]
+          },
+          {
+            id: "helm_package",
+            order: 4,
+            title: "4. Helm Chart Artifact Packaging",
+            category: "ARTIFACT",
+            categoryColor: "#6366f1",
+            icon: "package",
+            description: "Packages Kubernetes Helm chart and signs the OCI artifact with Cosign signature.",
+            terminalLogs: [
+              "[helm] Linting chart values.yaml... OK",
+              "[cosign] Signed container and chart artifact with keyless OIDC"
+            ]
+          },
+          {
+            id: "canary_deploy",
+            order: 5,
+            title: "5. Argo Rollouts Canary (10%)",
+            category: "DEPLOY",
+            categoryColor: "#f59e0b",
+            icon: "shuffle",
+            description: "Deploys new release to 10% of users while routing 90% of traffic to the stable baseline.",
+            terminalLogs: [
+              "[argo] Canary deployment initiated at 10% weight",
+              "[istio] Service mesh splitting traffic: 90% stable / 10% canary"
+            ]
+          },
+          {
+            id: "prometheus_slo",
+            order: 6,
+            title: "6. Prometheus SLO Health Check",
+            category: "MONITOR",
+            categoryColor: "#eab308",
+            icon: "activity",
+            description: "Automated analysis verifies error rate < 0.01% and P99 latency < 50ms for canary pods.",
+            terminalLogs: [
+              "[prometheus] Querying: sum(rate(http_requests_total{status=~'5..'}[5m]))",
+              "[prometheus] Error budget consumed: 0.00% (SLO Healthy)",
+              "[datadog] APM distributed tracing anomalies: 0"
+            ]
+          },
+          {
+            id: "full_promotion",
+            order: 7,
+            title: "7. 100% Traffic Promotion",
+            category: "DEPLOY",
+            categoryColor: "#10b981",
+            icon: "trending-up",
+            description: "Promotes canary to 100% production traffic after meeting all automated safety gates.",
+            terminalLogs: [
+              "[argo] Promoting canary rollout to 100% weight",
+              "[k8s] Scaled up new replica sets, decommissioned old version pods"
+            ]
+          },
+          {
+            id: "slack_broadcast",
+            order: 8,
+            title: "8. ChatOps SRE Notification",
+            category: "NOTIFY",
+            categoryColor: "#06b6d4",
+            icon: "bell",
+            description: "Sends automated deployment telemetry confirmation to Slack #devops-war-room channel.",
+            terminalLogs: [
+              "[chatops] Notification sent to #devops-war-room",
+              "[status] PRODUCTION RESCUE COMPLETE: Deployment verified healthy!"
+            ]
+          }
+        ]
+      }
+    ];
+
+    /* Main Game Engine */
+    const DECOY_STAGES = [
+      { id: 'decoy_force', order: 0, title: 'Force Push Without Review', category: 'SOURCE', categoryColor: '#00f3ff', icon: 'git-pull', description: 'Pushes directly to the protected branch, bypassing approvals and branch rules.', terminalLogs: ['[git] push --force origin main'] },
+      { id: 'decoy_gate', order: 0, title: 'Disable Quality Gate', category: 'QUALITY', categoryColor: '#a855f7', icon: 'shield', description: 'Turns off scanners and coverage thresholds so the pipeline never blocks a release.', terminalLogs: ['[ci] quality gate: DISABLED'] },
+      { id: 'decoy_prodbuild', order: 0, title: 'Build Image On Prod Server', category: 'BUILD', categoryColor: '#3b82f6', icon: 'layers', description: 'Compiles the container directly on the live host instead of a clean CI runner.', terminalLogs: ['[docker] building on prod-01...'] },
+      { id: 'decoy_ftp', order: 0, title: 'Manual FTP Upload To Prod', category: 'DEPLOY', categoryColor: '#10b981', icon: 'cloud', description: 'Copies artifacts to production by hand, with no rollback or health probes.', terminalLogs: ['[ftp] put app.zip /var/www'] },
+      { id: 'decoy_ssh', order: 0, title: 'SSH Hotpatch In Production', category: 'DEPLOY', categoryColor: '#10b981', icon: 'zap', description: 'Engineer edits live files over SSH, leaving servers out of sync with git.', terminalLogs: ['[ssh] root@prod-01: vim app.js'] }
+    ];
+
+    class PipelineRecallGame {
+      constructor() {
+        this.currentLevelIndex = 1;
+        this.player = localStorage.getItem('devops_recall_player') || 'DevOpsRookie';
+        this.phase = 'BRIEFING';
+        this.timer = null;
+        this.timeLeft = 0;
+        this.totalTime = 0;
+        this.startTime = 0;
+        this.elapsedRebuildTime = 0;
+        this.skippedMemorizeEarly = false;
+        this.placedSlots = [];
+        this.poolItems = [];
+        this.draggedItem = null;
+        this.dragSource = null;
+        this.attempts = 1;
+
+        this.elements = {
+          playerNameInput: document.getElementById('input-player-name'),
+          hudPlayerName: document.getElementById('hud-player-name'),
+          hudPhaseName: document.getElementById('hud-phase-name'),
+          hudTimer: document.getElementById('hud-timer'),
+          hudScoreValue: document.getElementById('hud-score-value'),
+          headerMissionName: document.getElementById('header-mission-name'),
+          phaseBanner: document.getElementById('phase-banner'),
+          phaseTag: document.getElementById('phase-tag'),
+          phaseHeading: document.getElementById('phase-heading'),
+          phaseInstruction: document.getElementById('phase-instruction'),
+          memorizeScanner: document.getElementById('memorize-scanner'),
+          btnSkipMemorize: document.getElementById('btn-skip-memorize'),
+          btnExecutePipeline: document.getElementById('btn-execute-pipeline'),
+          btnClearPipeline: document.getElementById('btn-clear-pipeline'),
+          slotsContainer: document.getElementById('pipeline-slots-container'),
+          poolSection: document.getElementById('pool-section'),
+          poolContainer: document.getElementById('pool-container'),
+          poolCount: document.getElementById('pool-count'),
+          terminalBody: document.getElementById('terminal-body'),
+          modalBriefing: document.getElementById('modal-briefing'),
+          modalResult: document.getElementById('modal-result'),
+          modalLeaderboard: document.getElementById('modal-leaderboard'),
+          modalRules: document.getElementById('modal-rules'),
+          briefingLevelPicker: document.getElementById('briefing-level-picker'),
+          scoreAccuracy: document.getElementById('score-accuracy'),
+          scoreSpeed: document.getElementById('score-speed'),
+          scoreTotal: document.getElementById('score-total'),
+          resultStatusBadge: document.getElementById('result-status-badge'),
+          resultTitle: document.getElementById('result-title'),
+          resultMessage: document.getElementById('result-message'),
+          resultTimeDetail: document.getElementById('result-time-detail'),
+          leaderboardBody: document.getElementById('leaderboard-body')
+        };
+
+        this.initConfetti();
+        this.bindEvents();
+        this.initLevelsPicker();
+        this.renderLeaderboard();
+      }
+
+      get currentLevel() {
+        return PIPELINE_LEVELS[this.currentLevelIndex];
+      }
+
+      bindEvents() {
+        document.addEventListener('click', () => {
+          soundFX.init();
+        }, { once: true });
+
+        document.getElementById('btn-sound').addEventListener('click', () => {
+          const isMuted = soundFX.toggleMute();
+          document.getElementById('sound-icon-on').style.display = isMuted ? 'none' : 'block';
+          document.getElementById('sound-icon-off').style.display = isMuted ? 'block' : 'none';
+          if (!isMuted) soundFX.playClick();
+        });
+
+        document.getElementById('btn-fullscreen').addEventListener('click', () => {
+          if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(() => {});
+          } else {
+            document.exitFullscreen().catch(() => {});
+          }
+        });
+
+        document.getElementById('btn-start-mission').addEventListener('click', () => {
+          const name = this.elements.playerNameInput.value.trim();
+          this.player = name || 'DevOpsRookie';
+          localStorage.setItem('devops_recall_player', this.player);
+          this.elements.hudPlayerName.textContent = this.player;
+          this.closeModal(this.elements.modalBriefing);
+          soundFX.playClick();
+          this.startMemorizationPhase();
+        });
+
+        this.elements.btnSkipMemorize.addEventListener('click', () => {
+          soundFX.playSnap();
+          this.skippedMemorizeEarly = true;
+          this.logTerminal(`[OPERATOR] Memorization scan skipped early by ${this.player}. Bonus speed multiplier registered!`, 'info');
+          this.startRebuildPhase();
+        });
+
+        this.elements.btnExecutePipeline.addEventListener('click', () => {
+          this.executeAndVerifyPipeline();
+        });
+
+        this.elements.btnClearPipeline.addEventListener('click', () => {
+          this.resetAllSlots();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+          const c = e.target.closest && e.target.closest('.stage-card');
+          if (!c || c.classList.contains('dragging')) return;
+          const r = c.getBoundingClientRect();
+          const x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+          c.style.setProperty('--ry', ((x - 0.5) * 16) + 'deg');
+          c.style.setProperty('--rx', ((0.5 - y) * 16) + 'deg');
+          c.style.setProperty('--mx', (x * 100) + '%');
+          c.style.setProperty('--my', (y * 100) + '%');
+        });
+        document.addEventListener('mouseout', (e) => {
+          const c = e.target.closest && e.target.closest('.stage-card');
+          if (c) { c.style.setProperty('--rx', '0deg'); c.style.setProperty('--ry', '0deg'); }
+        });
+
+        const pool = this.elements.poolContainer;
+        pool.addEventListener('dragover', (e) => e.preventDefault());
+        pool.addEventListener('drop', (e) => {
+          e.preventDefault();
+          if (this.draggedItem && typeof this.dragSource === 'number') {
+            this.placedSlots[this.dragSource] = null;
+            this.poolItems.push(this.draggedItem);
+            this.draggedItem = null;
+            this.dragSource = null;
+            soundFX.playClick();
+            this.renderRebuildSlots();
+            this.renderPool();
+          }
+        });
+
+        document.getElementById('btn-rules').addEventListener('click', () => {
+          soundFX.playClick();
+          this.openModal(this.elements.modalRules);
+        });
+
+        document.getElementById('btn-leaderboard').addEventListener('click', () => {
+          soundFX.playClick();
+          this.renderLeaderboard();
+          this.openModal(this.elements.modalLeaderboard);
+        });
+
+        document.getElementById('btn-select-mission').addEventListener('click', () => {
+          soundFX.playClick();
+          this.openModal(this.elements.modalBriefing);
+        });
+
+        document.querySelectorAll('[data-close]').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const modalId = e.currentTarget.getAttribute('data-close');
+            this.closeModal(document.getElementById(modalId));
+            soundFX.playClick();
+          });
+        });
+
+        document.getElementById('btn-replay').addEventListener('click', () => {
+          this.closeModal(this.elements.modalResult);
+          this.startMemorizationPhase();
+        });
+
+        document.getElementById('btn-view-leaderboard-from-result').addEventListener('click', () => {
+          this.closeModal(this.elements.modalResult);
+          this.renderLeaderboard();
+          this.openModal(this.elements.modalLeaderboard);
+        });
+
+        document.getElementById('btn-clear-leaderboard').addEventListener('click', () => {
+          if (confirm('Clear all local leaderboard records for Techverse?')) {
+            localStorage.removeItem('devops_pipeline_leaderboard');
+            this.renderLeaderboard();
+          }
+        });
+      }
+
+      initLevelsPicker() {
+        const container = this.elements.briefingLevelPicker;
+        container.innerHTML = '';
+
+        PIPELINE_LEVELS.forEach((lvl, idx) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = `btn-cyber ${idx === this.currentLevelIndex ? 'primary' : ''}`;
+          btn.style.flexDirection = 'column';
+          btn.style.alignItems = 'flex-start';
+          btn.style.padding = '0.75rem';
+          btn.innerHTML = `
+            <span style="font-size:0.7rem; color:var(--neon-cyan); letter-spacing:1px;">${lvl.badge}</span>
+            <span style="font-size:0.95rem; font-weight:700;">${lvl.difficulty}</span>
+            <span style="font-size:0.75rem; color:var(--text-dim); text-transform:none;">${lvl.stages.length} Stages &bull; ${lvl.memorizeTime}s Study</span>
+          `;
+          btn.addEventListener('click', () => {
+            container.querySelectorAll('button').forEach(b => b.classList.remove('primary'));
+            btn.classList.add('primary');
+            this.currentLevelIndex = idx;
+            this.elements.headerMissionName.textContent = lvl.name.split(':')[0] + ': ' + lvl.difficulty.split(' ')[0];
+            soundFX.playClick();
+          });
+          container.appendChild(btn);
+        });
+
+        this.elements.headerMissionName.textContent = this.currentLevel.name.split(':')[0] + ': ' + this.currentLevel.difficulty.split(' ')[0];
+      }
+
+      startMemorizationPhase() {
+        clearInterval(this.timer);
+        this.phase = 'MEMORIZE';
+        this.skippedMemorizeEarly = false;
+        this.attempts = 1;
+        this.bestCorrect = 0;
+        this.firstTryAccuracy = 0;
+        this.selectedSlot = null;
+        const lvl = this.currentLevel;
+
+        this.placedSlots = [...lvl.stages];
+        this.poolItems = [];
+
+        this.elements.hudPhaseName.textContent = 'PHASE 1: MEMORIZE';
+        this.elements.hudPhaseName.style.color = 'var(--neon-purple)';
+        this.elements.hudTimer.className = 'stat-value timer-pulse';
+        this.elements.hudScoreValue.textContent = `${lvl.maxPoints} PTS`;
+
+        this.elements.phaseBanner.className = 'phase-banner memorize-phase';
+        this.elements.phaseTag.innerHTML = '<span class="pulse-dot"></span> PHASE 1: ARCHITECTURAL SCAN';
+        this.elements.phaseHeading.textContent = `STUDY THE ${lvl.stages.length}-STAGE DEPLOYMENT PIPELINE`;
+        this.elements.phaseInstruction.textContent = `Memorize the exact execution sequence. Stages will scramble in ${lvl.memorizeTime} seconds!`;
+        this.elements.memorizeScanner.style.display = 'block';
+        this.elements.btnSkipMemorize.style.display = 'inline-flex';
+        this.elements.btnExecutePipeline.style.display = 'none';
+        this.elements.btnClearPipeline.style.display = 'none';
+        this.elements.poolSection.style.display = 'none';
+
+        this.renderStudySlots();
+
+        this.clearTerminal();
+        this.logTerminal(`[MISSION START] Level: ${lvl.name}`, 'info');
+        this.logTerminal(`[SCENARIO] ${lvl.scenario}`, 'info');
+        this.logTerminal(`[SCANNER] Diagnostic radar active. Memorizing ${lvl.stages.length} stages...`, 'info');
+
+        this.timeLeft = lvl.memorizeTime;
+        this.deadline = Date.now() + lvl.memorizeTime * 1000;
+        this.totalTime = lvl.memorizeTime;
+        this.updateTimerDisplay();
+
+        this.timer = setInterval(() => {
+          this.timeLeft = this.remaining();
+          this.updateTimerDisplay();
+          if (this.timeLeft <= 3 && this.timeLeft > 0) {
+            soundFX.playTick();
+          }
+          if (this.timeLeft <= 0) {
+            clearInterval(this.timer);
+            this.startRebuildPhase();
+          }
+        }, 1000);
+      }
+
+      renderStudySlots() {
+        const container = this.elements.slotsContainer;
+        container.innerHTML = '';
+
+        this.placedSlots.forEach((stage, idx) => {
+          const slot = document.createElement('div');
+          slot.className = 'pipeline-slot';
+          const badge = document.createElement('div');
+          badge.className = 'slot-index-badge';
+          badge.textContent = `STAGE ${idx + 1}`;
+          slot.appendChild(badge);
+
+          const card = this.createCardElement(stage, true);
+          card.classList.add('flip-in');
+          card.style.animationDelay = (idx * 140) + 'ms';
+          slot.appendChild(card);
+          container.appendChild(slot);
+        });
+      }
+
+      startRebuildPhase() {
+        clearInterval(this.timer);
+        this.phase = 'REBUILD';
+        soundFX.playAlert();
+        this.dealPool = true;
+
+        const lvl = this.currentLevel;
+        this.placedSlots = new Array(lvl.stages.length).fill(null);
+
+        const decoys = this.shuffle([...DECOY_STAGES]).slice(0, 2);
+        this.poolItems = this.shuffle([...lvl.stages, ...decoys]);
+
+
+        this.elements.hudPhaseName.textContent = 'PHASE 2: REBUILD';
+        this.elements.hudPhaseName.style.color = 'var(--neon-cyan)';
+        this.elements.hudTimer.className = 'stat-value timer-pulse';
+
+        this.elements.phaseBanner.className = 'phase-banner rebuild-phase';
+        this.elements.phaseTag.innerHTML = '<span class="pulse-dot"></span> PHASE 2: PIPELINE RECONSTRUCTION';
+        this.elements.phaseHeading.textContent = 'RESTORE THE EXECUTION SEQUENCE';
+        this.elements.phaseInstruction.textContent = 'Rebuild the sequence from memory (Step 1 to ' + lvl.stages.length + '). Careful: some cards are decoys that do not belong in this pipeline!';
+        this.elements.memorizeScanner.style.display = 'none';
+        this.elements.btnSkipMemorize.style.display = 'none';
+        this.elements.btnExecutePipeline.style.display = 'inline-flex';
+        this.elements.btnClearPipeline.style.display = 'inline-flex';
+        this.elements.poolSection.style.display = 'flex';
+
+        this.logTerminal(`[ALERT] Pipeline configuration corrupted! Server migration rollback triggered!`, 'warn');
+        this.logTerminal(`[TASK] Junior SRE ${this.player}: Assemble blocks from pool into sequence.`, 'warn');
+
+        this.renderRebuildSlots();
+        this.renderPool();
+
+        this.timeLeft = lvl.rebuildTime;
+        this.deadline = Date.now() + lvl.rebuildTime * 1000;
+        this.totalTime = lvl.rebuildTime;
+        this.startTime = Date.now();
+        this.updateTimerDisplay();
+
+        this.timer = setInterval(() => {
+          this.timeLeft = this.remaining();
+          this.updateTimerDisplay();
+
+          if (this.timeLeft <= 15) {
+            this.elements.hudTimer.className = 'stat-value timer-urgent';
+            soundFX.playTick();
+          }
+
+          if (this.timeLeft <= 0) {
+            clearInterval(this.timer);
+            this.handleTimeOut();
+          }
+        }, 1000);
+      }
+
+      renderRebuildSlots() {
+        const container = this.elements.slotsContainer;
+        container.innerHTML = '';
+
+        this.placedSlots.forEach((stage, idx) => {
+          const slot = document.createElement('div');
+          this.selectedSlot = null;
+          slot.className = `pipeline-slot ${stage ? '' : 'slot-empty'}`;
+          if (idx === 0) { this._prev = this.prevPlaced || []; this.prevPlaced = []; }
+          this.prevPlaced[idx] = stage ? stage.id : null;
+          if (stage && this._prev[idx] !== stage.id) slot.classList.add('snap');
+          slot.dataset.slotIndex = idx;
+
+          const badge = document.createElement('div');
+          badge.className = 'slot-index-badge';
+          badge.textContent = `STEP ${idx + 1}`;
+          slot.appendChild(badge);
+
+          if (stage) {
+            const card = this.createCardElement(stage, false, idx);
+            slot.appendChild(card);
+          } else {
+            const placeholder = document.createElement('div');
+            placeholder.className = 'slot-placeholder';
+            placeholder.innerHTML = `
+              <svg class="slot-placeholder-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <div class="slot-placeholder-text">Drop or Click to assign Step ${idx + 1}</div>
+            `;
+            slot.appendChild(placeholder);
+          }
+
+          slot.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            slot.classList.add('drag-over');
+          });
+
+          slot.addEventListener('dragleave', () => {
+            slot.classList.remove('drag-over');
+          });
+
+          slot.addEventListener('drop', (e) => {
+            e.preventDefault();
+            slot.classList.remove('drag-over');
+            this.handleDropOnSlot(idx);
+          });
+
+          slot.addEventListener('click', () => {
+            if (!stage && this.poolItems.length > 0) {
+              const itemToPlace = this.poolItems.shift();
+              this.placedSlots[idx] = itemToPlace;
+              soundFX.playSnap();
+              this.renderRebuildSlots();
+              this.renderPool();
+            }
+          });
+
+          container.appendChild(slot);
+        });
+
+        this.updateExecuteButtonState();
+      }
+
+      renderPool() {
+        const container = this.elements.poolContainer;
+        container.innerHTML = '';
+
+        if (this.poolItems.length === 0) {
+          container.innerHTML = `
+            <div class="pool-empty-state">
+              <svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              <span>ALL STAGES PLACED ON PIPELINE TRACK! READY TO EXECUTE BUILD.</span>
+            </div>
+          `;
+          this.elements.poolCount.textContent = 'POOL CLEARED';
+          this.elements.poolCount.style.color = 'var(--neon-green)';
+          return;
+        }
+
+        this.elements.poolCount.textContent = `${this.poolItems.length} CARDS IN POOL (DECOYS INCLUDED)`;
+        this.elements.poolCount.style.color = 'var(--neon-cyan)';
+
+        const n = this.poolItems.length;
+        this.poolItems.forEach((stage, idx) => {
+          const card = this.createCardElement(stage, false, null, idx);
+          card.style.setProperty('--r', ((idx - (n - 1) / 2) * 3) + 'deg');
+          if (this.dealPool) {
+            card.classList.add('deal');
+            card.style.animationDelay = (idx * 90) + 'ms';
+          }
+          container.appendChild(card);
+        });
+        this.dealPool = false;
+      }
+
+      createCardElement(stage, isStudyView = false, slotIndex = null, poolIndex = null) {
+        const card = document.createElement('div');
+        card.className = `stage-card ${isStudyView ? 'study-view' : ''}`;
+        card.dataset.stageId = stage.id;
+        card.style.setProperty('--c', stage.categoryColor);
+        card.draggable = !isStudyView && this.phase === 'REBUILD';
+
+        const iconSvg = this.getIconSvg(stage.icon);
+
+        card.innerHTML = `
+          <div class="stage-card-header">
+            <span class="stage-tag" style="border: 1px solid ${stage.categoryColor}; color: ${stage.categoryColor};">
+              ${stage.category}
+            </span>
+            <div class="stage-icon-wrap" style="color: ${stage.categoryColor};">
+              ${iconSvg}
+            </div>
+          </div>
+          <div class="stage-title">${stage.title.replace(/^\d+\.\s*/, '')}</div>
+          <div class="stage-desc">${stage.description}</div>
+          ${!isStudyView && slotIndex !== null ? `
+            <div class="stage-footer">
+              <span class="stage-order-preview">Configured for Step ${slotIndex + 1}</span>
+              <button class="btn-remove-slot" title="Return to inventory pool" type="button">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+              </button>
+            </div>
+          ` : ''}
+        `;
+
+        if (!isStudyView && slotIndex !== null) {
+          card.addEventListener('click', () => {
+            if (this.selectedSlot === null || this.selectedSlot === undefined) {
+              this.selectedSlot = slotIndex;
+              card.classList.add('selected-swap');
+              soundFX.playClick();
+            } else {
+              const a = this.selectedSlot, b = slotIndex;
+              this.selectedSlot = null;
+              if (a !== b) {
+                [this.placedSlots[a], this.placedSlots[b]] = [this.placedSlots[b], this.placedSlots[a]];
+                soundFX.playSnap();
+              }
+              this.renderRebuildSlots();
+            }
+          });
+          const removeBtn = card.querySelector('.btn-remove-slot');
+          if (removeBtn) {
+            removeBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const removed = this.placedSlots[slotIndex];
+              this.placedSlots[slotIndex] = null;
+              this.poolItems.push(removed);
+              soundFX.playClick();
+              this.renderRebuildSlots();
+              this.renderPool();
+            });
+          }
+        }
+
+        if (!isStudyView && poolIndex !== null) {
+          card.addEventListener('click', () => {
+            const firstEmptySlot = this.placedSlots.findIndex(s => s === null);
+            if (firstEmptySlot !== -1) {
+              const item = this.poolItems.splice(poolIndex, 1)[0];
+              this.placedSlots[firstEmptySlot] = item;
+              soundFX.playSnap();
+              this.renderRebuildSlots();
+              this.renderPool();
+            }
+          });
+        }
+
+        if (!isStudyView && this.phase === 'REBUILD') {
+          card.addEventListener('dragstart', (e) => {
+            this.draggedItem = stage;
+            this.dragSource = slotIndex !== null ? slotIndex : 'pool';
+            card.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', stage.id);
+            soundFX.playClick();
+          });
+
+          card.addEventListener('dragend', () => {
+            card.classList.remove('dragging');
+          });
+        }
+
+        return card;
+      }
+
+      handleDropOnSlot(targetSlotIdx) {
+        if (!this.draggedItem) return;
+        soundFX.playSnap();
+
+        if (typeof this.dragSource === 'number') {
+          const sourceSlotIdx = this.dragSource;
+          const targetExisting = this.placedSlots[targetSlotIdx];
+          this.placedSlots[targetSlotIdx] = this.draggedItem;
+          this.placedSlots[sourceSlotIdx] = targetExisting;
+        } else {
+          const poolIndex = this.poolItems.findIndex(item => item.id === this.draggedItem.id);
+          if (poolIndex !== -1) {
+            this.poolItems.splice(poolIndex, 1);
+          }
+          const existingInSlot = this.placedSlots[targetSlotIdx];
+          if (existingInSlot) {
+            this.poolItems.push(existingInSlot);
+          }
+          this.placedSlots[targetSlotIdx] = this.draggedItem;
+        }
+
+        this.draggedItem = null;
+        this.dragSource = null;
+        this.renderRebuildSlots();
+        this.renderPool();
+      }
+
+      resetAllSlots() {
+        soundFX.playClick();
+        this.placedSlots.forEach(stage => {
+          if (stage) this.poolItems.push(stage);
+        });
+        this.placedSlots = new Array(this.currentLevel.stages.length).fill(null);
+        this.renderRebuildSlots();
+        this.renderPool();
+        this.logTerminal(`[RESET] All stages returned to pool.`, 'warn');
+      }
+
+      updateExecuteButtonState() {
+        const isFull = this.placedSlots.every(s => s !== null);
+        if (isFull) {
+          this.elements.btnExecutePipeline.classList.add('accent-green');
+          this.elements.btnExecutePipeline.style.opacity = '1';
+        } else {
+          this.elements.btnExecutePipeline.classList.remove('accent-green');
+          this.elements.btnExecutePipeline.style.opacity = '0.7';
+        }
+      }
+
+      async executeAndVerifyPipeline() {
+        const unfilledCount = this.placedSlots.filter(s => s === null).length;
+        if (unfilledCount > 0) {
+          soundFX.playError();
+          this.toast(`Pipeline incomplete! ${unfilledCount} empty slot(s) left.`);
+          return;
+        }
+
+        clearInterval(this.timer);
+        this.phase = 'EXECUTING';
+        this.elapsedRebuildTime = (Date.now() - this.startTime) / 1000;
+
+        this.elements.phaseBanner.className = 'phase-banner executing-phase';
+        this.elements.phaseTag.innerHTML = '<span class="pulse-dot"></span> PHASE 3: LIVE PIPELINE EXECUTION';
+        this.elements.phaseHeading.textContent = 'RUNNING CI/CD DEPLOYMENT PIPELINE...';
+        this.elements.phaseInstruction.textContent = 'Simulating real-time automated runners, tests, and cluster deployments.';
+        this.elements.btnExecutePipeline.style.display = 'none';
+        this.elements.btnClearPipeline.style.display = 'none';
+
+        this.logTerminal(`----------------------------------------------------------------`, 'info');
+        this.logTerminal(`[EXEC] Triggering pipeline runner for commit HEAD...`, 'info');
+        this.logTerminal(`[BUILD] Agent worker runner-01 assigned. Environment: Production`, 'info');
+
+        const expectedStages = this.currentLevel.stages;
+        let allCorrect = true;
+        let failedAtStep = -1;
+
+        const slotElements = this.elements.slotsContainer.querySelectorAll('.pipeline-slot');
+
+        for (let i = 0; i < this.placedSlots.length; i++) {
+          const placedStage = this.placedSlots[i];
+          const expectedStage = expectedStages[i];
+          const slotCard = slotElements[i].querySelector('.stage-card');
+
+          if (slotCard) {
+            slotCard.classList.add('exec-active');
+          }
+
+          if (placedStage.terminalLogs) {
+            for (const log of placedStage.terminalLogs) {
+              this.logTerminal(log);
+              await this.sleep(180);
+            }
+          }
+
+          await this.sleep(400);
+
+          if (placedStage.id === expectedStage.id) {
+            soundFX.playStepPass();
+            if (slotCard) {
+              slotCard.classList.remove('exec-active');
+              slotCard.classList.add('exec-success');
+            }
+            this.logTerminal(`[PASS] Step ${i + 1} (${placedStage.title.replace(/^\d+\.\s*/, '')}) executed successfully in 1.4s.`, 'success');
+          } else {
+            allCorrect = false;
+            failedAtStep = i;
+            soundFX.playError();
+            if (slotCard) {
+              slotCard.classList.remove('exec-active');
+              slotCard.classList.add('exec-failure');
+            }
+            this.logTerminal(`[FATAL ERROR] Pipeline halted at Step ${i + 1}!`, 'error');
+            this.logTerminal(`[DIAGNOSTIC] Step sequence dependency violation!`, 'error');
+            this.logTerminal(`[HINT] Step ${i + 1} cannot run: an upstream dependency is missing, or this stage does not belong in the pipeline.`, 'error');
+            break;
+          }
+        }
+
+        const correctCount = this.placedSlots.filter((st, i) => st && st.id === expectedStages[i].id).length;
+        this.bestCorrect = Math.max(this.bestCorrect || 0, correctCount);
+        if (this.attempts === 1) this.firstTryAccuracy = Math.round((correctCount / expectedStages.length) * 100);
+
+        await this.sleep(600);
+
+        if (allCorrect) {
+          this.handleVictory();
+        } else {
+          this.handleFailure(failedAtStep);
+        }
+      }
+
+      handleVictory() {
+        this.phase = 'FINISHED';
+        soundFX.playSuccess();
+        this.fireConfetti();
+        this.elements.slotsContainer.querySelectorAll('.stage-card').forEach((c, i) => {
+          c.style.animationDelay = (i * 120) + 'ms';
+          c.classList.add('win-wave');
+        });
+
+        this.logTerminal(`[SUCCESS] 100% OF PIPELINE STAGES PASSED! ALL CHECKS VERIFIED.`, 'success');
+        this.logTerminal(`[METRICS] Production traffic restored with 0 errors. Response latency: 18ms.`, 'success');
+
+        const basePoints = 100;
+        const timeUsed = this.elapsedRebuildTime;
+        const maxTime = this.currentLevel.rebuildTime;
+        const timeRatio = Math.max(0, (maxTime - timeUsed) / maxTime);
+
+        let speedBonus = Math.round(timeRatio * 40);
+        if (this.skippedMemorizeEarly) speedBonus += 10;
+        speedBonus = Math.min(50, speedBonus);
+
+        const totalScore = Math.max(20, basePoints + speedBonus - (this.attempts - 1) * 15);
+
+        this.saveScoreToLeaderboard(totalScore, timeUsed, `${this.firstTryAccuracy}%`);
+
+        this.elements.resultStatusBadge.textContent = 'PRODUCTION RESCUED';
+        this.elements.resultStatusBadge.style.color = 'var(--neon-green)';
+        this.elements.resultStatusBadge.style.borderColor = 'var(--neon-green)';
+        this.elements.resultTitle.textContent = 'DEPLOYMENT SUCCESSFUL!';
+        this.elements.resultMessage.textContent = `Outstanding work, ${this.player}! You memorized and reconstructed the entire CI/CD pipeline flawlessly. The Techverse platform is completely operational.`;
+        this.elements.scoreAccuracy.textContent = `${this.firstTryAccuracy}% (first try)`;
+        this.elements.scoreSpeed.textContent = `+${speedBonus}`;
+        this.elements.scoreTotal.textContent = `${totalScore} / 150`;
+        this.elements.resultTimeDetail.textContent = `Completed in ${timeUsed.toFixed(1)}s (Allowed: ${maxTime}s) ${this.skippedMemorizeEarly ? '• Early Scan Skip Bonus Earned' : ''}`;
+
+        this.openModal(this.elements.modalResult);
+      }
+
+      handleFailure(failedStepIdx) {
+        this.phase = 'REBUILD';
+        this.attempts++;
+        const dg = this.elements.slotsContainer;
+        dg.classList.remove('shake'); void dg.offsetWidth; dg.classList.add('shake');
+
+        this.elements.phaseBanner.className = 'phase-banner memorize-phase';
+        this.elements.phaseHeading.textContent = `PIPELINE FAILED AT STEP ${failedStepIdx + 1}`;
+        this.elements.phaseInstruction.textContent = 'Click blocks to swap them or hit RESET SLOTS. Review the terminal error log below to fix the sequence.';
+        this.elements.btnExecutePipeline.style.display = 'inline-flex';
+        this.elements.btnClearPipeline.style.display = 'inline-flex';
+
+        if (this.timeLeft <= 0) {
+          this.timeLeft = 25;
+        }
+        this.deadline = Date.now() + this.timeLeft * 1000;
+
+        this.timer = setInterval(() => {
+          this.timeLeft = this.remaining();
+          this.updateTimerDisplay();
+          if (this.timeLeft <= 0) {
+            clearInterval(this.timer);
+            this.handleTimeOut();
+          }
+        }, 1000);
+      }
+
+      handleTimeOut() {
+        this.phase = 'FINISHED';
+        soundFX.playError();
+
+        this.logTerminal(`[CRITICAL] Server downtime SLA breached! Outage duration exceeded limit.`, 'error');
+
+        this.elements.resultStatusBadge.textContent = 'TIME EXPIRED';
+        this.elements.resultStatusBadge.style.color = 'var(--neon-red)';
+        this.elements.resultStatusBadge.style.borderColor = 'var(--neon-red)';
+        this.elements.resultTitle.textContent = 'PRODUCTION OUTAGE OCCURRED';
+        this.elements.resultMessage.textContent = 'The countdown expired before the pipeline could be restored. Customers experienced downtime on the platform.';
+        const partial = Math.round(((this.bestCorrect || 0) / this.currentLevel.stages.length) * 40);
+        this.elements.scoreAccuracy.textContent = `${this.firstTryAccuracy || 0}%`;
+        this.elements.scoreSpeed.textContent = '+0';
+        this.elements.scoreTotal.textContent = `${partial} / 150`;
+        this.elements.resultTimeDetail.textContent = 'Time Limit Exceeded • Replay to practice visual memory';
+
+        this.openModal(this.elements.modalResult);
+      }
+
+      saveScoreToLeaderboard(score, timeSeconds, accuracy) {
+        const list = this.getLeaderboardData();
+        const entry = {
+          player: this.player,
+          mission: this.currentLevel.name.split(':')[0],
+          score: score,
+          time: `${timeSeconds.toFixed(1)}s`,
+          accuracy: accuracy,
+          date: new Date().toLocaleDateString()
+        };
+        list.push(entry);
+        list.sort((a, b) => b.score - a.score);
+        localStorage.setItem('devops_pipeline_leaderboard', JSON.stringify(list.slice(0, 20)));
+        this.renderLeaderboard();
+      }
+
+      getLeaderboardData() {
+        try {
+          const data = localStorage.getItem('devops_pipeline_leaderboard');
+          if (data) return JSON.parse(data);
+        } catch (e) {}
+        return [
+          { player: 'Alex_SRE', mission: 'Mission 2', score: 148, time: '22.4s', accuracy: '100%', date: 'Oct 24' },
+          { player: 'Kavya_DevOps', mission: 'Mission 2', score: 144, time: '25.8s', accuracy: '100%', date: 'Oct 24' },
+          { player: 'Tux_Penguin', mission: 'Mission 2', score: 135, time: '31.2s', accuracy: '100%', date: 'Oct 24' },
+          { player: 'CloudRanger', mission: 'Mission 1', score: 130, time: '36.5s', accuracy: '100%', date: 'Oct 24' }
+        ];
+      }
+
+      renderLeaderboard() {
+        const tbody = this.elements.leaderboardBody;
+        const data = this.getLeaderboardData();
+        tbody.innerHTML = '';
+
+        if (data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 2rem;">No scores recorded yet. Be the first to rescue production!</td></tr>';
+          return;
+        }
+
+        data.forEach((row, idx) => {
+          const tr = document.createElement('tr');
+          const rankBadgeClass = idx === 0 ? 'rank-1' : idx === 1 ? 'rank-2' : idx === 2 ? 'rank-3' : '';
+          tr.innerHTML = `
+            <td><span class="rank-badge ${rankBadgeClass}">${idx + 1}</span></td>
+            <td style="font-weight:700; color:#fff;">${this.escapeHtml(row.player)}</td>
+            <td><span style="color:var(--neon-cyan);">${row.mission}</span></td>
+            <td>${row.time}</td>
+            <td><strong style="color:var(--neon-green); font-size:1.05rem;">${row.score} PTS</strong></td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      updateTimerDisplay() {
+        const m = Math.floor(Math.max(0, this.timeLeft) / 60);
+        const s = Math.max(0, this.timeLeft) % 60;
+        this.elements.hudTimer.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      }
+
+      logTerminal(text, type = 'normal') {
+        const line = document.createElement('div');
+        line.className = `terminal-line ${type}`;
+        line.textContent = text;
+        this.elements.terminalBody.appendChild(line);
+        this.elements.terminalBody.scrollTop = this.elements.terminalBody.scrollHeight;
+      }
+
+      clearTerminal() {
+        this.elements.terminalBody.innerHTML = '';
+      }
+
+      openModal(modal) {
+        modal.classList.add('active');
+      }
+
+      closeModal(modal) {
+        modal.classList.remove('active');
+      }
+
+      shuffle(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+      }
+
+      remaining() {
+        return Math.max(0, Math.ceil((this.deadline - Date.now()) / 1000));
+      }
+
+      toast(msg) {
+        let box = document.getElementById('toast-container');
+        if (!box) {
+          box = document.createElement('div');
+          box.id = 'toast-container';
+          box.className = 'toast-container';
+          document.body.appendChild(box);
+        }
+        const t = document.createElement('div');
+        t.className = 'toast';
+        t.textContent = msg;
+        box.appendChild(t);
+        setTimeout(() => t.remove(), 2600);
+      }
+
+      sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+      }
+
+      escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+      }
+
+      getIconSvg(iconName) {
+        switch (iconName) {
+          case 'commit':
+            return '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v2m0 12v2m8-8h-2M6 12H4m11 0a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>';
+          case 'flask':
+            return '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>';
+          case 'box':
+            return '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>';
+          case 'cloud':
+            return '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 00-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>';
+          case 'git-pull':
+            return '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2m-8 0a2 2 0 100 4 2 2 0 000-4zm8 8a2 2 0 100 4 2 2 0 000-4z"></path></svg>';
+          case 'shield':
+            return '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>';
+          case 'search-code':
+            return '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path></svg>';
+          case 'check-circle':
+            return '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+          case 'zap':
+            return '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>';
+          case 'tag':
+            return '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>';
+          case 'layers':
+            return '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>';
+          case 'package':
+            return '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>';
+          case 'shuffle':
+            return '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>';
+          case 'activity':
+            return '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>';
+          case 'trending-up':
+            return '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>';
+          case 'bell':
+            return '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>';
+          default:
+            return '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>';
+        }
+      }
+
+      /* Lightweight Canvas Confetti Engine */
+      initConfetti() {
+        this.canvas = document.getElementById('confetti-canvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.particles = [];
+        this.animationId = null;
+
+        const resize = () => {
+          this.canvas.width = window.innerWidth;
+          this.canvas.height = window.innerHeight;
+        };
+        window.addEventListener('resize', resize);
+        resize();
+      }
+
+      fireConfetti() {
+        this.particles = [];
+        const colors = ['#00f3ff', '#10b981', '#a855f7', '#f59e0b', '#3b82f6', '#ec4899'];
+        for (let i = 0; i < 120; i++) {
+          this.particles.push({
+            x: this.canvas.width / 2,
+            y: this.canvas.height / 2,
+            vx: (Math.random() - 0.5) * 18,
+            vy: (Math.random() - 0.7) * 20,
+            size: Math.random() * 8 + 4,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            rotation: Math.random() * 360,
+            rotationSpeed: (Math.random() - 0.5) * 10,
+            opacity: 1
+          });
+        }
+
+        if (!this.animationId) {
+          this.loopConfetti();
+        }
+      }
+
+      loopConfetti() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+          const p = this.particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.4;
+          p.rotation += p.rotationSpeed;
+          p.opacity -= 0.008;
+
+          if (p.opacity <= 0 || p.y > this.canvas.height) {
+            this.particles.splice(i, 1);
+            continue;
+          }
+
+          this.ctx.save();
+          this.ctx.translate(p.x, p.y);
+          this.ctx.rotate((p.rotation * Math.PI) / 180);
+          this.ctx.globalAlpha = p.opacity;
+          this.ctx.fillStyle = p.color;
+          this.ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+          this.ctx.restore();
+        }
+
+        if (this.particles.length > 0) {
+          this.animationId = requestAnimationFrame(() => this.loopConfetti());
+        } else {
+          this.animationId = null;
+          this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        }
+      }
+    }
+
+    // Launch game on DOM ready
+    window.addEventListener('DOMContentLoaded', () => {
+      window.game = new PipelineRecallGame();
+    });
+  </script>
+</body>
+</html>
