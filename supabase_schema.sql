@@ -188,7 +188,7 @@ CREATE TABLE IF NOT EXISTS public.final_scores (
 CREATE INDEX IF NOT EXISTS idx_final_scores_ranking
 ON public.final_scores (
     rounds_completed DESC,
-    average_score DESC,
+    total_score DESC,
     total_time_ms ASC,
     combined_streak DESC,
     last_completed_at ASC

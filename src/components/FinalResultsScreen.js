@@ -40,13 +40,13 @@ export class FinalResultsScreen {
           <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(0.6rem, 1.5vw, 1rem); margin-bottom: clamp(0.9rem, 2vh, 1.4rem);">
             <div style="background: rgba(5, 10, 22, 0.9); border: 1px solid rgba(0, 243, 255, 0.3); border-radius: 14px; padding: clamp(0.75rem, 1.8vh, 1.1rem); text-align: center; box-shadow: 0 4px 16px rgba(0, 243, 255, 0.1);">
               <div style="font-family: var(--font-display); font-size: 0.68rem; color: var(--text-dim); letter-spacing: 1.2px; text-transform: uppercase;">
-                AVERAGE SCORE (R1+R2+R3) ÷ 3
+                TOTAL SCORE (R1+R2+R3)
               </div>
               <div style="font-family: var(--font-display); font-size: clamp(1.5rem, 3.2vw, 2.1rem); font-weight: 900; color: var(--neon-cyan); margin-top: 0.15rem;">
-                ${summary.averageScore !== null ? summary.averageScore.toFixed(2) : 'PENDING'}
+                ${summary.totalRawScore !== null ? summary.totalRawScore.toLocaleString() : 'PENDING'}
               </div>
               <div style="font-family: var(--font-mono); font-size: 0.68rem; color: var(--neon-cyan);">
-                Priority 1 Qualifier
+                Priority 1 Primary Metric
               </div>
             </div>
 
@@ -58,19 +58,19 @@ export class FinalResultsScreen {
                 ${portalState.formatMs(summary.totalCompletionTimeMs)}
               </div>
               <div style="font-family: var(--font-mono); font-size: 0.68rem; color: var(--neon-emerald);">
-                Priority 2 Tie-Breaker
+                Priority 2 Tie-Breaker (Less Time)
               </div>
             </div>
 
             <div style="background: rgba(5, 10, 22, 0.9); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 14px; padding: clamp(0.75rem, 1.8vh, 1.1rem); text-align: center; box-shadow: 0 4px 16px rgba(168, 85, 247, 0.1);">
               <div style="font-family: var(--font-display); font-size: 0.68rem; color: var(--text-dim); letter-spacing: 1.2px; text-transform: uppercase;">
-                COMBINED STREAK
+                MAX STREAK
               </div>
               <div style="font-family: var(--font-display); font-size: clamp(1.5rem, 3.2vw, 2.1rem); font-weight: 900; color: var(--neon-purple); margin-top: 0.15rem;">
                 ${summary.combinedStreak}
               </div>
               <div style="font-family: var(--font-mono); font-size: 0.68rem; color: var(--neon-purple);">
-                Priority 3 Tie-Breaker
+                Priority 3 Conflict Tie-Breaker
               </div>
             </div>
           </div>
@@ -101,12 +101,19 @@ export class FinalResultsScreen {
                   <td style="color: var(--neon-emerald); font-weight: 800;">${summary.r3Score !== null ? `${summary.r3Score} / 350` : 'Incomplete'}</td>
                   <td style="color: var(--text-dim); font-size: 0.8rem;">Time: ${portalState.formatMs(summary.r3Time)} · 45s Incident Deck</td>
                 </tr>
-                <tr style="background: rgba(0, 243, 255, 0.05);">
-                  <td><strong style="color: var(--neon-cyan);">Average Score</strong></td>
-                  <td style="font-weight: 900; font-size: 1.15rem; color: var(--neon-cyan);">
+                <tr style="background: rgba(0, 243, 255, 0.08);">
+                  <td><strong style="color: var(--neon-cyan);">Total Tournament Score</strong></td>
+                  <td style="font-weight: 900; font-size: 1.2rem; color: var(--neon-cyan);">
+                    ${summary.totalRawScore !== null ? summary.totalRawScore.toLocaleString() : 'Awaiting Completion'}
+                  </td>
+                  <td style="color: var(--text-dim); font-size: 0.8rem;">R1 + R2 + R3 (Primary Leaderboard Metric)</td>
+                </tr>
+                <tr style="background: rgba(0, 243, 255, 0.02);">
+                  <td><strong style="color: var(--text-main);">Average Score (Reference)</strong></td>
+                  <td style="font-weight: 700; font-size: 1rem; color: var(--text-main);">
                     ${summary.averageScore !== null ? summary.averageScore.toFixed(2) : 'Awaiting Completion'}
                   </td>
-                  <td style="color: var(--text-dim); font-size: 0.8rem;">(R1 + R2 + R3) / 3 (Primary Ranking Metric)</td>
+                  <td style="color: var(--text-dim); font-size: 0.8rem;">(R1 + R2 + R3) / 3</td>
                 </tr>
                 <tr style="background: rgba(16, 185, 129, 0.05);">
                   <td><strong style="color: var(--neon-emerald);">Total Official Time</strong></td>

@@ -67,9 +67,9 @@ export class LeaderboardScreen {
 
           <!-- Ranking Rule Transparency Banner -->
           <div style="background: rgba(8, 14, 26, 0.7); border: 1px solid var(--portal-border); border-radius: var(--radius-sm); padding: 0.6rem 1rem; margin-bottom: 1.2rem; display: flex; gap: 1.2rem; font-family: var(--font-mono); font-size: 0.76rem; color: var(--text-dim); flex-wrap: wrap;">
-            <span><strong style="color: var(--neon-cyan);">Priority 1:</strong> Average Score (Desc)</span>
+            <span><strong style="color: var(--neon-cyan);">Priority 1:</strong> Total Score (Desc)</span>
             <span><strong style="color: var(--neon-green);">Priority 2:</strong> Total Duration (Asc)</span>
-            <span><strong style="color: var(--neon-purple);">Priority 3:</strong> Combined Streak (Desc)</span>
+            <span><strong style="color: var(--neon-purple);">Priority 3:</strong> Max Streak (Desc)</span>
             <span><strong style="color: var(--neon-amber);">Priority 4:</strong> Verified Timestamp (Asc)</span>
           </div>
 
@@ -167,9 +167,9 @@ export class LeaderboardScreen {
             <th style="text-align: right;">R1 Score</th>
             <th style="text-align: right;">R2 Score</th>
             <th style="text-align: right;">R3 Score</th>
-            <th style="text-align: right;">Average Score</th>
+            <th style="text-align: right; color: var(--neon-cyan);">Total Score</th>
             <th style="text-align: right;">Total Time</th>
-            <th style="text-align: center;">Combined Streak</th>
+            <th style="text-align: center;">Max Streak</th>
             <th style="text-align: center;">Status</th>
           </tr>
         </thead>
@@ -196,13 +196,13 @@ export class LeaderboardScreen {
                   ${row.round_3_score !== null && row.round_3_score !== undefined ? row.round_3_score : '<span style="color:var(--text-muted);">--</span>'}
                 </td>
                 <td style="text-align: right; font-weight: 900; font-size: 1.05rem; color: var(--neon-cyan);">
-                  ${row.average_score !== null && row.average_score !== undefined ? Number(row.average_score).toFixed(2) : '<span style="color:var(--text-muted);">--</span>'}
+                  ${row.total_raw_score !== null && row.total_raw_score !== undefined ? row.total_raw_score.toLocaleString() : '<span style="color:var(--text-muted);">--</span>'}
                 </td>
                 <td style="text-align: right; font-family: var(--font-mono); color: var(--neon-green);">
                   ${portalState.formatMs(row.total_completion_time_ms)}
                 </td>
                 <td style="text-align: center; color: var(--neon-amber); font-weight: 700;">
-                  ${row.combined_streak}
+                  ${row.combined_streak || 0}
                 </td>
                 <td style="text-align: center;">
                   <span style="font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; font-family: var(--font-mono); ${

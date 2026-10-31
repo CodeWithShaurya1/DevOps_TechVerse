@@ -149,31 +149,31 @@ async function runTests() {
     assert.strictEqual(displayedScore, 2500, 'Official score preserved against practice replay');
   });
 
-  // 11. Ranking Priority 1: Higher average score always ranks first
-  test('Priority 1: Participant with higher average score ranks higher regardless of time', () => {
-    const p1 = { name: 'Alice', avgScore: 900.0, totalTime: 140000, streak: 10 };
-    const p2 = { name: 'Bob', avgScore: 850.0, totalTime: 90000, streak: 20 };
+  // 11. Ranking Priority 1: Higher total max score always ranks first
+  test('Priority 1: Participant with higher total score ranks higher regardless of time', () => {
+    const p1 = { name: 'Alice', totalScore: 2700, totalTime: 140000, streak: 10 };
+    const p2 = { name: 'Bob', totalScore: 2550, totalTime: 90000, streak: 20 };
 
-    const sorted = [p2, p1].sort((a, b) => b.avgScore - a.avgScore);
+    const sorted = [p2, p1].sort((a, b) => b.totalScore - a.totalScore);
     assert.strictEqual(sorted[0].name, 'Alice');
   });
 
-  // 12. Ranking Priority 2: Faster total time breaks equal average score
-  test('Priority 2: Faster total completion time breaks equal average score', () => {
-    const p1 = { name: 'Alice', avgScore: 900.0, totalTime: 120000, streak: 5 };
-    const p2 = { name: 'Bob', avgScore: 900.0, totalTime: 100000, streak: 2 };
+  // 12. Ranking Priority 2: Faster total time (less time constraints) breaks equal total score
+  test('Priority 2: Faster total completion time breaks equal total score', () => {
+    const p1 = { name: 'Alice', totalScore: 2700, totalTime: 120000, streak: 5 };
+    const p2 = { name: 'Bob', totalScore: 2700, totalTime: 100000, streak: 2 };
 
-    const sorted = [p1, p2].sort((a, b) => (b.avgScore - a.avgScore) || (a.totalTime - b.totalTime));
+    const sorted = [p1, p2].sort((a, b) => (b.totalScore - a.totalScore) || (a.totalTime - b.totalTime));
     assert.strictEqual(sorted[0].name, 'Bob');
   });
 
-  // 13. Ranking Priority 3: Combined streak breaks equal score and time
-  test('Priority 3: Combined streak metric breaks tie only when score and time are equal', () => {
-    const p1 = { name: 'Alice', avgScore: 900.0, totalTime: 100000, streak: 12 };
-    const p2 = { name: 'Bob', avgScore: 900.0, totalTime: 100000, streak: 8 };
+  // 13. Ranking Priority 3: Max streak / combined streak metric breaks tie only when score and time are equal
+  test('Priority 3: Max streak metric breaks tie only when score and time are equal', () => {
+    const p1 = { name: 'Alice', totalScore: 2700, totalTime: 100000, streak: 12 };
+    const p2 = { name: 'Bob', totalScore: 2700, totalTime: 100000, streak: 8 };
 
     const sorted = [p2, p1].sort((a, b) => {
-      if (b.avgScore !== a.avgScore) return b.avgScore - a.avgScore;
+      if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
       if (a.totalTime !== b.totalTime) return a.totalTime - b.totalTime;
       return b.streak - a.streak;
     });
@@ -183,14 +183,14 @@ async function runTests() {
 
   // 14. Incomplete participants handling
   test('Incomplete participants (1/3 or 2/3) show clear status and rank below completed (3/3)', () => {
-    const pDone = { name: 'Alice', completedCount: 3, avgScore: 500 };
-    const pIncomplete = { name: 'Charlie', completedCount: 2, avgScore: 800 };
+    const pDone = { name: 'Alice', completedCount: 3, totalScore: 1500 };
+    const pIncomplete = { name: 'Charlie', completedCount: 2, totalScore: 2400 };
 
     const sorted = [pIncomplete, pDone].sort((a, b) => {
       const aDone = a.completedCount === 3 ? 1 : 0;
       const bDone = b.completedCount === 3 ? 1 : 0;
       if (aDone !== bDone) return bDone - aDone;
-      return b.avgScore - a.avgScore;
+      return b.totalScore - a.totalScore;
     });
 
     assert.strictEqual(sorted[0].name, 'Alice');

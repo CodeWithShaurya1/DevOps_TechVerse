@@ -697,30 +697,30 @@ class SupabaseService {
 
   // Sort strictly using Techverse rules:
   // 1. Full completions (3/3) prioritized over in-progress
-  // 2. Average score (descending)
-  // 3. Total completion time ms (ascending)
-  // 4. Combined streak metric (descending)
-  // 5. Earlier verified completion timestamp (ascending)
+  // 2. Priority 1: Total Max Score (Sum of all 3 rounds) (descending)
+  // 3. Priority 2: Total Duration / Time (ascending - less time is better)
+  // 4. Priority 3: Max Streak / Combined Streak for conflict resolution (descending)
+  // 5. Priority 4: Earlier verified completion timestamp (ascending)
   _sortLeaderboard(rows) {
     // Exclude participants with 0 rounds played
-    const activeRows = rows.filter(r => (r.completed_rounds_count || 0) > 0 || r.total_raw_score > 0);
+    const activeRows = rows.filter(r => (r.completed_rounds_count || 0) > 0 || (r.total_raw_score || 0) > 0);
 
     const sorted = [...activeRows].sort((a, b) => {
       const aDone = a.completed_rounds_count === 3 ? 1 : 0;
       const bDone = b.completed_rounds_count === 3 ? 1 : 0;
       if (aDone !== bDone) return bDone - aDone;
 
-      // Priority 1: Average Score (descending)
-      const aAvg = Number(a.average_score || 0);
-      const bAvg = Number(b.average_score || 0);
-      if (aAvg !== bAvg) return bAvg - aAvg;
+      // Priority 1: Total Max Score (Sum of all 3 rounds) (descending)
+      const aTotal = Number(a.total_raw_score !== undefined ? a.total_raw_score : ((a.round_1_score || 0) + (a.round_2_score || 0) + (a.round_3_score || 0)));
+      const bTotal = Number(b.total_raw_score !== undefined ? b.total_raw_score : ((b.round_1_score || 0) + (b.round_2_score || 0) + (b.round_3_score || 0)));
+      if (aTotal !== bTotal) return bTotal - aTotal;
 
-      // Priority 2: Total Completion Time (ascending)
+      // Priority 2: Total Completion Time (ascending - less time is better)
       const aTime = Number(a.total_completion_time_ms || 0);
       const bTime = Number(b.total_completion_time_ms || 0);
       if (aTime !== bTime) return aTime - bTime;
 
-      // Priority 3: Combined Streak (descending)
+      // Priority 3: Max Streak / Combined Streak for conflict resolution (descending)
       const aStreak = Number(a.combined_streak || 0);
       const bStreak = Number(b.combined_streak || 0);
       if (aStreak !== bStreak) return bStreak - aStreak;
