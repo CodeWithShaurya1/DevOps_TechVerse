@@ -72,15 +72,12 @@ async function runTests() {
   });
 
   // 3, 4, 5. Separate round storage
-  test('Round 1, Round 2, and Round 3 scores are stored separately in game_results', () => {
-    const results = [
-      { id: '1', participant_id: 'uuid-1234', round_number: 1, game_name: 'Server Sniper', score: 2400, is_official_attempt: true },
-      { id: '2', participant_id: 'uuid-1234', round_number: 2, game_name: 'Pipeline Recall', score: 140, is_official_attempt: true },
-      { id: '3', participant_id: 'uuid-1234', round_number: 3, game_name: 'SwipeOps', score: 300, is_official_attempt: true }
-    ];
+  test('Round 1, Round 2, and Round 3 scores are stored separately in game1_scores, game2_scores, game3_scores', () => {
+    const r1 = { id: '1', enrollment_number: '23CS001', score: 2400, is_official_attempt: true };
+    const r2 = { id: '2', enrollment_number: '23CS001', score: 140, is_official_attempt: true };
+    const r3 = { id: '3', enrollment_number: '23CS001', score: 300, is_official_attempt: true };
 
-    const dict = {};
-    results.forEach(r => { dict[r.round_number] = r; });
+    const dict = { 1: r1, 2: r2, 3: r3 };
 
     assert.strictEqual(dict[1].score, 2400);
     assert.strictEqual(dict[2].score, 140);
@@ -237,16 +234,20 @@ async function runTests() {
     assert.strictEqual(game3Operator, 'ROOT_COMMANDER');
   });
 
-  // 18. Supabase schema SQL integrity & RLS policies
-  test('Supabase SQL schema specifies participants, game_results, replay_authorizations, and leaderboard view with RLS', () => {
+  // 18. Supabase 5-table schema SQL integrity & RLS policies
+  test('Supabase SQL schema specifies exactly 5 tables (game1_scores, game2_scores, game3_scores, final_scores, admin_relogin) with RLS', () => {
     const sql = fs.readFileSync('supabase_schema.sql', 'utf8');
 
-    assert.ok(sql.includes('CREATE TABLE IF NOT EXISTS public.participants'), 'Contains participants table');
-    assert.ok(sql.includes('CREATE TABLE IF NOT EXISTS public.game_results'), 'Contains game_results table');
-    assert.ok(sql.includes('CREATE TABLE IF NOT EXISTS public.replay_authorizations'), 'Contains replay_authorizations table');
-    assert.ok(sql.includes('CREATE OR REPLACE VIEW public.leaderboard'), 'Contains leaderboard view');
+    assert.ok(sql.includes('CREATE TABLE IF NOT EXISTS public.game1_scores'), 'Contains game1_scores table');
+    assert.ok(sql.includes('CREATE TABLE IF NOT EXISTS public.game2_scores'), 'Contains game2_scores table');
+    assert.ok(sql.includes('CREATE TABLE IF NOT EXISTS public.game3_scores'), 'Contains game3_scores table');
+    assert.ok(sql.includes('CREATE TABLE IF NOT EXISTS public.final_scores'), 'Contains final_scores table');
+    assert.ok(sql.includes('CREATE TABLE IF NOT EXISTS public.admin_relogin'), 'Contains admin_relogin table');
     assert.ok(sql.includes('ENABLE ROW LEVEL SECURITY'), 'Contains RLS activation');
-    assert.ok(sql.includes('idx_game_results_official'), 'Contains unique index on official attempt');
+    assert.ok(sql.includes('idx_game1_official_attempt'), 'Contains unique index on game1 official attempt');
+    assert.ok(sql.includes('idx_game2_official_attempt'), 'Contains unique index on game2 official attempt');
+    assert.ok(sql.includes('idx_game3_official_attempt'), 'Contains unique index on game3 official attempt');
+    assert.ok(sql.includes('sync_final_scores'), 'Contains auto-synchronization trigger');
   });
 
   // 19. Complete 11-step tournament sequence

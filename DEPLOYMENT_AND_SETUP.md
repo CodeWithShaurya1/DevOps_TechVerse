@@ -1,6 +1,6 @@
 # TECHVERSE ’26 — UNIFIED DEVOPS GAMING PORTAL
 
-A unified, high-octane competitive gaming portal built for **Club Battle: Techverse ’26** orchestrating three DevOps gauntlets under **one shared Supabase database**:
+A unified, high-octane competitive gaming portal built for **Club Battle: Techverse ’26** orchestrating three DevOps gauntlets under **one shared Supabase database with exactly five tables**:
 
 1. **Round 1: Server Sniper — Chaos Edition** (60s Kubernetes 6×6 Pod Arena triage)
 2. **Round 2: DevOps Arena — Pipeline Recall** (CI/CD visual memorization & reconstruction)
@@ -26,23 +26,23 @@ The portal strictly enforces the exact 11-step tournament progression:
 
 ---
 
-## 🗄️ 2. Supabase Database Setup (Single Source of Truth)
+## 🗄️ 2. Supabase Database Setup (Exactly 5 Tables)
 
-All tournament records are stored in one shared Supabase PostgreSQL database.
+All tournament records are stored in the dedicated Supabase PostgreSQL project:
+- **Project URL:** `https://wuvrwrznhyoqdoafzpad.supabase.co`
+- **Publishable Key:** `sb_publishable_1ZwM-kLSC9FYRR3D5m0_xw_jxf3zrQa`
+
+### The 5 Tables:
+1. **`public.game1_scores`**: Round 1 (Server Sniper) scores, completion durations, streaks, accuracy, and official attempt constraints.
+2. **`public.game2_scores`**: Round 2 (Pipeline Recall) scores, completion durations, streaks, accuracy, and official attempt constraints.
+3. **`public.game3_scores`**: Round 3 (SwipeOps) scores, completion durations, streaks, accuracy, and official attempt constraints.
+4. **`public.final_scores`**: 4th table for final score = total score of 3/3, average score ((R1+R2+R3)/3), total duration, combined streaks, rounds completed, and overall tournament leaderboard ranking.
+5. **`public.admin_relogin`**: 5th table for operator re-login and practice replay authorizations authenticated via administrator key (`SHAURYA@GAME999`).
 
 ### Step 1: Execute SQL Schema
-Open the **SQL Editor** in your [Supabase Dashboard](https://supabase.com/dashboard) and paste the contents of [`supabase_schema.sql`](file:///Users/shaurya_bansal/comb_game/supabase_schema.sql):
+Open the **SQL Editor** in your [Supabase Dashboard](https://supabase.com/dashboard/project/wuvrwrznhyoqdoafzpad/sql) and paste the complete contents of [`supabase_schema.sql`](file:///Users/shaurya_bansal/comb_game/supabase_schema.sql).
 
-```sql
--- Creates:
--- 1. Table public.participants (UUID PK, full_name, enrollment_number_normalized UNIQUE)
--- 2. Table public.game_results (UUID PK, participant_id FK, round_number, score, duration_ms, streak, official constraint)
--- 3. Table public.replay_authorizations (UUID PK, participant_id FK, audit trail of admin clearances)
--- 4. View public.leaderboard (Strict 4-priority ranking view, hides enrollment numbers)
--- 5. Row Level Security (RLS) policies protecting official scores from participant tampering
-```
-
-Click **Run** to create the tables, indexes, and views.
+Click **Run** to create all 5 tables, performance indexes, RLS security policies, and the real-time auto-synchronization trigger.
 
 ---
 
@@ -52,12 +52,14 @@ Create or update `.env` in the root directory:
 
 ```env
 # Supabase Project URL
-VITE_SUPABASE_URL=https://rrocaucskfsokxubpgra.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://wuvrwrznhyoqdoafzpad.supabase.co
+VITE_SUPABASE_URL=https://wuvrwrznhyoqdoafzpad.supabase.co
 
 # Supabase Anonymous (Public) API Key
-VITE_SUPABASE_ANON_KEY=sb_publishable_QEmcA7peluK0phKfbIhdRA_lbtrCFmb
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_1ZwM-kLSC9FYRR3D5m0_xw_jxf3zrQa
+VITE_SUPABASE_ANON_KEY=sb_publishable_1ZwM-kLSC9FYRR3D5m0_xw_jxf3zrQa
 
-# Event Administrator Secret Key for authorized practice replays
+# Event Administrator Secret Key for authorized practice replays & re-logins
 VITE_ADMIN_PASSPHRASE=SHAURYA@GAME999
 ```
 
@@ -83,7 +85,7 @@ Open `http://localhost:3000` in your web browser.
 
 ## 🧪 5. Automated Verification Suite
 
-Run the full automated test suite verifying all 18 prompt requirements:
+Run the full automated test suite verifying all 28 prompt requirements:
 
 ```bash
 npm test
@@ -92,7 +94,7 @@ npm test
 ### Verified Criteria:
 - [x] Registration normalizes input and generates unique participant ID
 - [x] Same participant ID reaches all three rounds via session persistence
-- [x] Round 1, Round 2, and Round 3 scores are stored separately in `game_results`
+- [x] Round 1, Round 2, and Round 3 scores are stored separately in `game1_scores`, `game2_scores`, `game3_scores`
 - [x] Average score is calculated strictly by `(Round 1 + Round 2 + Round 3) / 3`
 - [x] Total completion time equals sum of round durations, strictly excluding registration and briefing
 - [x] Refreshing page does not reset an active attempt round start timer
@@ -106,21 +108,15 @@ npm test
 - [x] Public leaderboard view excludes enrollment numbers
 - [x] Admin key validates replay authorization securely
 - [x] Round 1, 2, 3 load using shared operator name without individual name modals
-- [x] Supabase SQL schema specifies participants, game_results, replay_authorizations, and leaderboard view with RLS
+- [x] Supabase SQL schema specifies exactly 5 tables (`game1_scores`, `game2_scores`, `game3_scores`, `final_scores`, `admin_relogin`) with RLS
 - [x] Complete 11-step tournament sequence is configured
 
 ---
 
-## 🚢 6. Vercel Deployment
+## 🚢 6. Deployment
 
-The project is fully compatible with Vercel zero-configuration deployment:
+Build the production bundle:
 
 ```bash
-# Production bundle build
 npm run build
-
-# Deploy via Vercel CLI (optional)
-npx vercel --prod
 ```
-
-Configure `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `VITE_ADMIN_PASSPHRASE` in the **Vercel Project Settings → Environment Variables**.

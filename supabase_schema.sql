@@ -1,282 +1,403 @@
 -- ============================================================================
--- TECHVERSE ’26 — UNIFIED DEVOPS GAMING PORTAL SCHEMA & SECURITY ARCHITECTURE
--- Shared Single Source of Truth for Round 1, Round 2, Round 3
+-- TECHVERSE ’26 — 5-TABLE BACKEND DATABASE ARCHITECTURE FOR SUPABASE
+-- Project URL: https://wuvrwrznhyoqdoafzpad.supabase.co
+--
+-- EXACTLY FIVE TABLES:
+--   1. public.game1_scores   (Round 1: Server Sniper scores)
+--   2. public.game2_scores   (Round 2: Pipeline Recall scores)
+--   3. public.game3_scores   (Round 3: SwipeOps scores)
+--   4. public.final_scores   (Total score of 3/3, average score & tournament ranking)
+--   5. public.admin_relogin  (Re-login & replay authorization audit by admin key)
 -- ============================================================================
 
--- 1. Enable pgcrypto for UUID generation
+-- 0. Enable UUID generation extension
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- Drop existing views/tables if necessary for a clean setup (optional in production)
--- DROP VIEW IF EXISTS public.leaderboard CASCADE;
 
--- ----------------------------------------------------------------------------
--- 2. Table: participants
--- Stores identity with normalized enrollment. Enrollment is private.
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS public.participants (
+-- ============================================================================
+-- TABLE 1: game1_scores (Round 1: Server Sniper)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS public.game1_scores (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    enrollment_number TEXT NOT NULL,
     full_name TEXT NOT NULL,
-    enrollment_number_normalized TEXT NOT NULL UNIQUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- Fast lookup indexes
-CREATE INDEX IF NOT EXISTS idx_participants_enrollment 
-ON public.participants (enrollment_number_normalized);
-
-CREATE INDEX IF NOT EXISTS idx_participants_created 
-ON public.participants (created_at DESC);
-
--- Enable RLS
-ALTER TABLE public.participants ENABLE ROW LEVEL SECURITY;
-
--- Allow anonymous registration (INSERT)
-CREATE POLICY "Allow public participant registration"
-ON public.participants FOR INSERT
-TO anon, authenticated
-WITH CHECK (true);
-
--- Allow public lookup of participant identity for session restoration
-CREATE POLICY "Allow public participant read"
-ON public.participants FOR SELECT
-TO anon, authenticated
-USING (true);
-
--- Deny public modifications / deletions
-CREATE POLICY "Deny public participant update"
-ON public.participants FOR UPDATE
-TO anon, authenticated
-USING (false);
-
-CREATE POLICY "Deny public participant delete"
-ON public.participants FOR DELETE
-TO anon, authenticated
-USING (false);
-
-
--- ----------------------------------------------------------------------------
--- 3. Table: game_results
--- Individual official and practice attempts for each of the 3 rounds.
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS public.game_results (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    participant_id UUID NOT NULL REFERENCES public.participants(id) ON DELETE CASCADE,
-    round_number INTEGER NOT NULL CHECK (round_number IN (1, 2, 3)),
-    game_name TEXT NOT NULL CHECK (game_name IN ('Server Sniper', 'Pipeline Recall', 'SwipeOps')),
     score INTEGER NOT NULL DEFAULT 0,
-    maximum_score INTEGER,
     completion_time_ms BIGINT NOT NULL DEFAULT 0,
-    completion_status TEXT NOT NULL DEFAULT 'completed' CHECK (completion_status IN ('completed', 'failed', 'timeout', 'abandoned')),
-    streak_count INTEGER NOT NULL DEFAULT 0,
-    best_streak INTEGER NOT NULL DEFAULT 0,
-    successful_actions INTEGER DEFAULT 0,
-    total_actions INTEGER DEFAULT 0,
-    attempt_number INTEGER NOT NULL DEFAULT 1,
+    streak INTEGER NOT NULL DEFAULT 0,
+    accuracy NUMERIC(5,2) DEFAULT 0,
+    completion_status TEXT NOT NULL DEFAULT 'completed',
     is_official_attempt BOOLEAN NOT NULL DEFAULT true,
-    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    attempt_number INTEGER NOT NULL DEFAULT 1,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Crucial unique constraints:
--- 1) A participant can only have ONE official attempt per round:
-CREATE UNIQUE INDEX IF NOT EXISTS idx_game_results_official 
-ON public.game_results (participant_id, round_number) 
+-- Ensure only 1 official attempt per operator in Round 1
+CREATE UNIQUE INDEX IF NOT EXISTS idx_game1_official_attempt
+ON public.game1_scores (enrollment_number)
 WHERE (is_official_attempt = true);
 
--- 2) Each attempt number for a participant per round is unique:
-CREATE UNIQUE INDEX IF NOT EXISTS idx_game_results_attempts 
-ON public.game_results (participant_id, round_number, attempt_number);
+CREATE INDEX IF NOT EXISTS idx_game1_scores_rank
+ON public.game1_scores (score DESC, completion_time_ms ASC);
 
--- Performance indexes for leaderboard queries
-CREATE INDEX IF NOT EXISTS idx_game_results_round_score 
-ON public.game_results (round_number, is_official_attempt, score DESC);
+ALTER TABLE public.game1_scores ENABLE ROW LEVEL SECURITY;
 
-CREATE INDEX IF NOT EXISTS idx_game_results_participant 
-ON public.game_results (participant_id);
-
--- Enable RLS
-ALTER TABLE public.game_results ENABLE ROW LEVEL SECURITY;
-
--- Allow reading results for the leaderboard & participant summary
-CREATE POLICY "Allow public game_results read"
-ON public.game_results FOR SELECT
+CREATE POLICY "Allow public read game1_scores"
+ON public.game1_scores FOR SELECT
 TO anon, authenticated
 USING (true);
 
--- Allow inserting game results (validated via unique indexes)
-CREATE POLICY "Allow public game_results insert"
-ON public.game_results FOR INSERT
+CREATE POLICY "Allow public insert game1_scores"
+ON public.game1_scores FOR INSERT
 TO anon, authenticated
 WITH CHECK (true);
 
--- Deny updating or tampering with submitted official results
-CREATE POLICY "Deny public game_results update"
-ON public.game_results FOR UPDATE
+CREATE POLICY "Deny public update game1_scores"
+ON public.game1_scores FOR UPDATE
 TO anon, authenticated
 USING (false);
 
-CREATE POLICY "Deny public game_results delete"
-ON public.game_results FOR DELETE
+CREATE POLICY "Deny public delete game1_scores"
+ON public.game1_scores FOR DELETE
 TO anon, authenticated
 USING (false);
 
 
--- ----------------------------------------------------------------------------
--- 4. Table: replay_authorizations
--- Audit trail of admin-authorized practice replays.
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS public.replay_authorizations (
+-- ============================================================================
+-- TABLE 2: game2_scores (Round 2: Pipeline Recall)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS public.game2_scores (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    participant_id UUID NOT NULL REFERENCES public.participants(id) ON DELETE CASCADE,
-    round_number INTEGER CHECK (round_number IN (1, 2, 3)),
-    authorization_status TEXT NOT NULL DEFAULT 'pending' CHECK (authorization_status IN ('pending', 'consumed', 'revoked')),
-    authorized_administrator TEXT NOT NULL DEFAULT 'ADMIN',
-    authorization_timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    reason TEXT,
+    enrollment_number TEXT NOT NULL,
+    full_name TEXT NOT NULL,
+    score INTEGER NOT NULL DEFAULT 0,
+    completion_time_ms BIGINT NOT NULL DEFAULT 0,
+    streak INTEGER NOT NULL DEFAULT 0,
+    accuracy NUMERIC(5,2) DEFAULT 0,
+    completion_status TEXT NOT NULL DEFAULT 'completed',
+    is_official_attempt BOOLEAN NOT NULL DEFAULT true,
+    attempt_number INTEGER NOT NULL DEFAULT 1,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Ensure only 1 official attempt per operator in Round 2
+CREATE UNIQUE INDEX IF NOT EXISTS idx_game2_official_attempt
+ON public.game2_scores (enrollment_number)
+WHERE (is_official_attempt = true);
+
+CREATE INDEX IF NOT EXISTS idx_game2_scores_rank
+ON public.game2_scores (score DESC, completion_time_ms ASC);
+
+ALTER TABLE public.game2_scores ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow public read game2_scores"
+ON public.game2_scores FOR SELECT
+TO anon, authenticated
+USING (true);
+
+CREATE POLICY "Allow public insert game2_scores"
+ON public.game2_scores FOR INSERT
+TO anon, authenticated
+WITH CHECK (true);
+
+CREATE POLICY "Deny public update game2_scores"
+ON public.game2_scores FOR UPDATE
+TO anon, authenticated
+USING (false);
+
+CREATE POLICY "Deny public delete game2_scores"
+ON public.game2_scores FOR DELETE
+TO anon, authenticated
+USING (false);
+
+
+-- ============================================================================
+-- TABLE 3: game3_scores (Round 3: SwipeOps)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS public.game3_scores (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    enrollment_number TEXT NOT NULL,
+    full_name TEXT NOT NULL,
+    score INTEGER NOT NULL DEFAULT 0,
+    completion_time_ms BIGINT NOT NULL DEFAULT 0,
+    streak INTEGER NOT NULL DEFAULT 0,
+    accuracy NUMERIC(5,2) DEFAULT 0,
+    completion_status TEXT NOT NULL DEFAULT 'completed',
+    is_official_attempt BOOLEAN NOT NULL DEFAULT true,
+    attempt_number INTEGER NOT NULL DEFAULT 1,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Ensure only 1 official attempt per operator in Round 3
+CREATE UNIQUE INDEX IF NOT EXISTS idx_game3_official_attempt
+ON public.game3_scores (enrollment_number)
+WHERE (is_official_attempt = true);
+
+CREATE INDEX IF NOT EXISTS idx_game3_scores_rank
+ON public.game3_scores (score DESC, completion_time_ms ASC);
+
+ALTER TABLE public.game3_scores ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow public read game3_scores"
+ON public.game3_scores FOR SELECT
+TO anon, authenticated
+USING (true);
+
+CREATE POLICY "Allow public insert game3_scores"
+ON public.game3_scores FOR INSERT
+TO anon, authenticated
+WITH CHECK (true);
+
+CREATE POLICY "Deny public update game3_scores"
+ON public.game3_scores FOR UPDATE
+TO anon, authenticated
+USING (false);
+
+CREATE POLICY "Deny public delete game3_scores"
+ON public.game3_scores FOR DELETE
+TO anon, authenticated
+USING (false);
+
+
+-- ============================================================================
+-- TABLE 4: final_scores (Aggregated Tournament Score = Total Score of 3/3)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS public.final_scores (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    enrollment_number TEXT NOT NULL UNIQUE,
+    full_name TEXT NOT NULL,
+    game1_score INTEGER NOT NULL DEFAULT 0,
+    game2_score INTEGER NOT NULL DEFAULT 0,
+    game3_score INTEGER NOT NULL DEFAULT 0,
+    total_score INTEGER NOT NULL DEFAULT 0,       -- Total score of 3/3 games
+    average_score NUMERIC(7,2) NOT NULL DEFAULT 0.00, -- (game1 + game2 + game3) / 3.0
+    game1_time_ms BIGINT NOT NULL DEFAULT 0,
+    game2_time_ms BIGINT NOT NULL DEFAULT 0,
+    game3_time_ms BIGINT NOT NULL DEFAULT 0,
+    total_time_ms BIGINT NOT NULL DEFAULT 0,
+    game1_streak INTEGER NOT NULL DEFAULT 0,
+    game2_streak INTEGER NOT NULL DEFAULT 0,
+    game3_streak INTEGER NOT NULL DEFAULT 0,
+    combined_streak INTEGER NOT NULL DEFAULT 0,
+    rounds_completed INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'REGISTERED',
+    last_completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Tournament Leaderboard Ranking Index
+CREATE INDEX IF NOT EXISTS idx_final_scores_ranking
+ON public.final_scores (
+    rounds_completed DESC,
+    average_score DESC,
+    total_time_ms ASC,
+    combined_streak DESC,
+    last_completed_at ASC
+);
+
+ALTER TABLE public.final_scores ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow public read final_scores"
+ON public.final_scores FOR SELECT
+TO anon, authenticated
+USING (true);
+
+CREATE POLICY "Allow public insert final_scores"
+ON public.final_scores FOR INSERT
+TO anon, authenticated
+WITH CHECK (true);
+
+CREATE POLICY "Allow public update final_scores"
+ON public.final_scores FOR UPDATE
+TO anon, authenticated
+USING (true)
+WITH CHECK (true);
+
+CREATE POLICY "Deny public delete final_scores"
+ON public.final_scores FOR DELETE
+TO anon, authenticated
+USING (false);
+
+
+-- ============================================================================
+-- TABLE 5: admin_relogin (Re-login & Replay Authorization by Admin Key)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS public.admin_relogin (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    enrollment_number TEXT NOT NULL,
+    admin_key TEXT NOT NULL,
+    round_number INTEGER, -- NULL = global operator relogin, 1/2/3 = specific round
+    action_type TEXT NOT NULL DEFAULT 'relogin', -- 'relogin' or 'replay'
+    status TEXT NOT NULL DEFAULT 'pending',      -- 'pending', 'consumed', 'revoked'
+    reason TEXT DEFAULT 'Administrator authorization',
+    authorized_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     consumed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_replay_auth_participant 
-ON public.replay_authorizations (participant_id, authorization_status);
+CREATE INDEX IF NOT EXISTS idx_admin_relogin_lookup
+ON public.admin_relogin (enrollment_number, status);
 
--- Enable RLS
-ALTER TABLE public.replay_authorizations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admin_relogin ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Allow public replay_authorizations read"
-ON public.replay_authorizations FOR SELECT
+CREATE POLICY "Allow public read admin_relogin"
+ON public.admin_relogin FOR SELECT
 TO anon, authenticated
 USING (true);
 
-CREATE POLICY "Allow public replay_authorizations insert"
-ON public.replay_authorizations FOR INSERT
+CREATE POLICY "Allow public insert admin_relogin"
+ON public.admin_relogin FOR INSERT
 TO anon, authenticated
 WITH CHECK (true);
 
-CREATE POLICY "Allow public replay_authorizations update"
-ON public.replay_authorizations FOR UPDATE
+CREATE POLICY "Allow public update admin_relogin"
+ON public.admin_relogin FOR UPDATE
 TO anon, authenticated
-USING (true);
+USING (true)
+WITH CHECK (true);
+
+CREATE POLICY "Deny public delete admin_relogin"
+ON public.admin_relogin FOR DELETE
+TO anon, authenticated
+USING (false);
 
 
--- ----------------------------------------------------------------------------
--- 5. Database View: leaderboard
--- Calculates ranking strictly according to Techverse '26 rules:
---   Priority 1 — Average score (descending)
---   Priority 2 — Total completion time (ascending)
---   Priority 3 — Combined streak metric (descending)
---   Priority 4 — Earlier verified completion timestamp (ascending)
--- Does NOT expose enrollment number.
--- ----------------------------------------------------------------------------
-CREATE OR REPLACE VIEW public.leaderboard AS
-WITH official_results AS (
-    SELECT 
-        participant_id,
-        round_number,
-        score,
-        completion_time_ms,
-        best_streak,
-        completion_status,
-        completed_at
-    FROM public.game_results
-    WHERE is_official_attempt = true
-),
-participant_aggregates AS (
-    SELECT
-        p.id AS participant_id,
-        p.full_name,
-        
-        -- Round 1 Metrics
-        MAX(CASE WHEN gr.round_number = 1 THEN gr.score END) AS round_1_score,
-        MAX(CASE WHEN gr.round_number = 1 THEN gr.completion_time_ms END) AS round_1_time_ms,
-        MAX(CASE WHEN gr.round_number = 1 THEN gr.best_streak END) AS round_1_streak,
-        MAX(CASE WHEN gr.round_number = 1 THEN gr.completion_status END) AS round_1_status,
-        
-        -- Round 2 Metrics
-        MAX(CASE WHEN gr.round_number = 2 THEN gr.score END) AS round_2_score,
-        MAX(CASE WHEN gr.round_number = 2 THEN gr.completion_time_ms END) AS round_2_time_ms,
-        MAX(CASE WHEN gr.round_number = 2 THEN gr.best_streak END) AS round_2_streak,
-        MAX(CASE WHEN gr.round_number = 2 THEN gr.completion_status END) AS round_2_status,
-        
-        -- Round 3 Metrics
-        MAX(CASE WHEN gr.round_number = 3 THEN gr.score END) AS round_3_score,
-        MAX(CASE WHEN gr.round_number = 3 THEN gr.completion_time_ms END) AS round_3_time_ms,
-        MAX(CASE WHEN gr.round_number = 3 THEN gr.best_streak END) AS round_3_streak,
-        MAX(CASE WHEN gr.round_number = 3 THEN gr.completion_status END) AS round_3_status,
-        
-        -- Computed Aggregates
-        COUNT(gr.round_number) AS completed_rounds_count,
-        (
-            COALESCE(MAX(CASE WHEN gr.round_number = 1 THEN gr.score END), 0) +
-            COALESCE(MAX(CASE WHEN gr.round_number = 2 THEN gr.score END), 0) +
-            COALESCE(MAX(CASE WHEN gr.round_number = 3 THEN gr.score END), 0)
-        ) AS total_raw_score,
-        
-        ROUND(
-            (
-                COALESCE(MAX(CASE WHEN gr.round_number = 1 THEN gr.score END), 0) +
-                COALESCE(MAX(CASE WHEN gr.round_number = 2 THEN gr.score END), 0) +
-                COALESCE(MAX(CASE WHEN gr.round_number = 3 THEN gr.score END), 0)
-            )::NUMERIC / 3.0,
-            2
-        ) AS average_score,
-        
-        (
-            COALESCE(MAX(CASE WHEN gr.round_number = 1 THEN gr.completion_time_ms END), 0) +
-            COALESCE(MAX(CASE WHEN gr.round_number = 2 THEN gr.completion_time_ms END), 0) +
-            COALESCE(MAX(CASE WHEN gr.round_number = 3 THEN gr.completion_time_ms END), 0)
-        ) AS total_completion_time_ms,
-        
-        (
-            COALESCE(MAX(CASE WHEN gr.round_number = 1 THEN gr.best_streak END), 0) +
-            COALESCE(MAX(CASE WHEN gr.round_number = 2 THEN gr.best_streak END), 0) +
-            COALESCE(MAX(CASE WHEN gr.round_number = 3 THEN gr.best_streak END), 0)
-        ) AS combined_streak,
-        
-        MAX(gr.completed_at) AS last_completed_at
-    FROM public.participants p
-    INNER JOIN official_results gr ON p.id = gr.participant_id
-    GROUP BY p.id, p.full_name
-)
-SELECT
-    DENSE_RANK() OVER (
-        ORDER BY
-            -- Completed all 3 rounds prioritized over incomplete
-            CASE WHEN completed_rounds_count = 3 THEN 1 ELSE 2 END ASC,
-            -- Priority 1: Average Score (Descending)
-            average_score DESC,
-            -- Priority 2: Total Completion Time (Ascending)
-            total_completion_time_ms ASC,
-            -- Priority 3: Combined Streak (Descending)
-            combined_streak DESC,
-            -- Priority 4: Verified timestamp tie-breaker (Ascending)
-            last_completed_at ASC
-    ) AS rank,
-    participant_id,
-    full_name,
-    round_1_score,
-    round_2_score,
-    round_3_score,
-    total_raw_score,
-    average_score,
-    round_1_time_ms,
-    round_2_time_ms,
-    round_3_time_ms,
-    total_completion_time_ms,
-    round_1_streak,
-    round_2_streak,
-    round_3_streak,
-    combined_streak,
-    completed_rounds_count,
-    CASE 
-        WHEN completed_rounds_count = 3 THEN 'COMPLETED (3/3)'
-        WHEN completed_rounds_count = 2 THEN 'IN PROGRESS (2/3)'
-        WHEN completed_rounds_count = 1 THEN 'IN PROGRESS (1/3)'
-        ELSE 'REGISTERED'
-    END AS completion_status,
-    last_completed_at
-FROM participant_aggregates;
+-- ============================================================================
+-- AUTOMATIC SYNCHRONIZATION TRIGGER: game scores -> final_scores
+-- Keeps final_scores (total of 3/3) in real-time sync with individual game scores
+-- ============================================================================
+CREATE OR REPLACE FUNCTION public.sync_final_scores()
+RETURNS TRIGGER AS $$
+DECLARE
+    r1 RECORD;
+    r2 RECORD;
+    r3 RECORD;
+    r_name TEXT;
+    r_enroll TEXT;
+    r_completed INTEGER := 0;
+    r_g1_score INTEGER := 0;
+    r_g2_score INTEGER := 0;
+    r_g3_score INTEGER := 0;
+    r_g1_time BIGINT := 0;
+    r_g2_time BIGINT := 0;
+    r_g3_time BIGINT := 0;
+    r_g1_streak INTEGER := 0;
+    r_g2_streak INTEGER := 0;
+    r_g3_streak INTEGER := 0;
+    r_total_score INTEGER := 0;
+    r_avg_score NUMERIC(7,2) := 0.00;
+    r_total_time BIGINT := 0;
+    r_comb_streak INTEGER := 0;
+    r_status TEXT := 'IN PROGRESS';
+    r_last_at TIMESTAMPTZ := NOW();
+BEGIN
+    r_enroll := NEW.enrollment_number;
+    r_name := NEW.full_name;
 
--- Grant public read access to the view
-GRANT SELECT ON public.leaderboard TO anon, authenticated;
+    -- Round 1 Score
+    SELECT score, completion_time_ms, streak, created_at INTO r1
+    FROM public.game1_scores
+    WHERE enrollment_number = r_enroll AND is_official_attempt = true
+    ORDER BY created_at DESC LIMIT 1;
+
+    IF FOUND THEN
+        r_completed := r_completed + 1;
+        r_g1_score := r1.score;
+        r_g1_time := r1.completion_time_ms;
+        r_g1_streak := r1.streak;
+        r_last_at := r1.created_at;
+    END IF;
+
+    -- Round 2 Score
+    SELECT score, completion_time_ms, streak, created_at INTO r2
+    FROM public.game2_scores
+    WHERE enrollment_number = r_enroll AND is_official_attempt = true
+    ORDER BY created_at DESC LIMIT 1;
+
+    IF FOUND THEN
+        r_completed := r_completed + 1;
+        r_g2_score := r2.score;
+        r_g2_time := r2.completion_time_ms;
+        r_g2_streak := r2.streak;
+        IF r2.created_at > r_last_at THEN r_last_at := r2.created_at; END IF;
+    END IF;
+
+    -- Round 3 Score
+    SELECT score, completion_time_ms, streak, created_at INTO r3
+    FROM public.game3_scores
+    WHERE enrollment_number = r_enroll AND is_official_attempt = true
+    ORDER BY created_at DESC LIMIT 1;
+
+    IF FOUND THEN
+        r_completed := r_completed + 1;
+        r_g3_score := r3.score;
+        r_g3_time := r3.completion_time_ms;
+        r_g3_streak := r3.streak;
+        IF r3.created_at > r_last_at THEN r_last_at := r3.created_at; END IF;
+    END IF;
+
+    -- Final Score = Total score of 3/3
+    r_total_score := r_g1_score + r_g2_score + r_g3_score;
+    r_avg_score := ROUND((r_total_score::NUMERIC / 3.0), 2);
+    r_total_time := r_g1_time + r_g2_time + r_g3_time;
+    r_comb_streak := r_g1_streak + r_g2_streak + r_g3_streak;
+
+    IF r_completed = 3 THEN
+        r_status := 'COMPLETED (3/3)';
+    ELSIF r_completed > 0 THEN
+        r_status := 'IN PROGRESS (' || r_completed || '/3)';
+    ELSE
+        r_status := 'REGISTERED';
+    END IF;
+
+    INSERT INTO public.final_scores (
+        enrollment_number, full_name,
+        game1_score, game2_score, game3_score,
+        total_score, average_score,
+        game1_time_ms, game2_time_ms, game3_time_ms, total_time_ms,
+        game1_streak, game2_streak, game3_streak, combined_streak,
+        rounds_completed, status, last_completed_at
+    ) VALUES (
+        r_enroll, r_name,
+        r_g1_score, r_g2_score, r_g3_score,
+        r_total_score, r_avg_score,
+        r_g1_time, r_g2_time, r_g3_time, r_total_time,
+        r_g1_streak, r_g2_streak, r_g3_streak, r_comb_streak,
+        r_completed, r_status, r_last_at
+    )
+    ON CONFLICT (enrollment_number) DO UPDATE SET
+        full_name = EXCLUDED.full_name,
+        game1_score = EXCLUDED.game1_score,
+        game2_score = EXCLUDED.game2_score,
+        game3_score = EXCLUDED.game3_score,
+        total_score = EXCLUDED.total_score,
+        average_score = EXCLUDED.average_score,
+        game1_time_ms = EXCLUDED.game1_time_ms,
+        game2_time_ms = EXCLUDED.game2_time_ms,
+        game3_time_ms = EXCLUDED.game3_time_ms,
+        total_time_ms = EXCLUDED.total_time_ms,
+        game1_streak = EXCLUDED.game1_streak,
+        game2_streak = EXCLUDED.game2_streak,
+        game3_streak = EXCLUDED.game3_streak,
+        combined_streak = EXCLUDED.combined_streak,
+        rounds_completed = EXCLUDED.rounds_completed,
+        status = EXCLUDED.status,
+        last_completed_at = EXCLUDED.last_completed_at;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_sync_final_scores_g1 ON public.game1_scores;
+CREATE TRIGGER trg_sync_final_scores_g1
+AFTER INSERT OR UPDATE ON public.game1_scores
+FOR EACH ROW EXECUTE FUNCTION public.sync_final_scores();
+
+DROP TRIGGER IF EXISTS trg_sync_final_scores_g2 ON public.game2_scores;
+CREATE TRIGGER trg_sync_final_scores_g2
+AFTER INSERT OR UPDATE ON public.game2_scores
+FOR EACH ROW EXECUTE FUNCTION public.sync_final_scores();
+
+DROP TRIGGER IF EXISTS trg_sync_final_scores_g3 ON public.game3_scores;
+CREATE TRIGGER trg_sync_final_scores_g3
+AFTER INSERT OR UPDATE ON public.game3_scores
+FOR EACH ROW EXECUTE FUNCTION public.sync_final_scores();

@@ -1,21 +1,36 @@
 /**
  * TECHVERSE ’26 — Supabase Service Client
- * Unified database interface for participant registration, game results,
- * replay authorizations, and the central leaderboard.
- * Includes seamless local fallback when offline or before SQL schema is executed.
+ * Unified database interface connected to the 5-table architecture:
+ *   1. game1_scores  (Round 1: Server Sniper)
+ *   2. game2_scores  (Round 2: Pipeline Recall)
+ *   3. game3_scores  (Round 3: SwipeOps)
+ *   4. final_scores  (Total score of 3/3, average score, tournament leaderboard)
+ *   5. admin_relogin (Admin re-login and practice replay authorization audit)
+ *
+ * Includes automatic local storage mirroring for resilient offline / pre-setup play.
  */
 
 import { createClient } from '@supabase/supabase-js';
 
-// Environment variables with fallback
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://rrocaucskfsokxubpgra.supabase.co';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_QEmcA7peluK0phKfbIhdRA_lbtrCFmb';
+// Environment variables with active defaults
+const SUPABASE_URL =
+  import.meta.env.VITE_SUPABASE_URL ||
+  import.meta.env.NEXT_PUBLIC_SUPABASE_URL ||
+  'https://wuvrwrznhyoqdoafzpad.supabase.co';
+
+const SUPABASE_ANON_KEY =
+  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  import.meta.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  'sb_publishable_1ZwM-kLSC9FYRR3D5m0_xw_jxf3zrQa';
+
 export const ADMIN_PASSPHRASE = import.meta.env.VITE_ADMIN_PASSPHRASE || 'SHAURYA@GAME999';
 
 // Local storage keys for resilient fallback
-const STORAGE_PARTICIPANTS = 'techverse_participants_v1';
-const STORAGE_RESULTS = 'techverse_results_v1';
-const STORAGE_REPLAYS = 'techverse_replays_v1';
+const STORAGE_G1 = 'techverse_game1_scores_v2';
+const STORAGE_G2 = 'techverse_game2_scores_v2';
+const STORAGE_G3 = 'techverse_game3_scores_v2';
+const STORAGE_FINAL = 'techverse_final_scores_v2';
+const STORAGE_ADMIN_RELOGIN = 'techverse_admin_relogin_v2';
 
 class SupabaseService {
   constructor() {
@@ -41,52 +56,35 @@ class SupabaseService {
 
   _initLocalStore() {
     if (typeof localStorage === 'undefined') return;
-    if (!localStorage.getItem(STORAGE_PARTICIPANTS)) {
-      localStorage.setItem(STORAGE_PARTICIPANTS, JSON.stringify([]));
-    }
-    if (!localStorage.getItem(STORAGE_RESULTS)) {
-      localStorage.setItem(STORAGE_RESULTS, JSON.stringify([]));
-    }
-    if (!localStorage.getItem(STORAGE_REPLAYS)) {
-      localStorage.setItem(STORAGE_REPLAYS, JSON.stringify([]));
-    }
+    [STORAGE_G1, STORAGE_G2, STORAGE_G3, STORAGE_FINAL, STORAGE_ADMIN_RELOGIN].forEach(key => {
+      if (!localStorage.getItem(key)) {
+        localStorage.setItem(key, JSON.stringify([]));
+      }
+    });
   }
 
   // --- LOCAL STORE HELPERS ---
-  _getLocalParticipants() {
+  _getLocalList(key) {
     try {
-      return JSON.parse(localStorage.getItem(STORAGE_PARTICIPANTS) || '[]');
+      return JSON.parse(localStorage.getItem(key) || '[]');
     } catch (_) {
       return [];
     }
   }
 
-  _saveLocalParticipants(list) {
-    localStorage.setItem(STORAGE_PARTICIPANTS, JSON.stringify(list));
+  _saveLocalList(key, list) {
+    if (typeof localStorage === 'undefined') return;
+    localStorage.setItem(key, JSON.stringify(list));
   }
 
-  _getLocalResults() {
-    try {
-      return JSON.parse(localStorage.getItem(STORAGE_RESULTS) || '[]');
-    } catch (_) {
-      return [];
-    }
+  _getGameStorageKey(roundNumber) {
+    if (roundNumber === 1) return STORAGE_G1;
+    if (roundNumber === 2) return STORAGE_G2;
+    return STORAGE_G3;
   }
 
-  _saveLocalResults(list) {
-    localStorage.setItem(STORAGE_RESULTS, JSON.stringify(list));
-  }
-
-  _getLocalReplays() {
-    try {
-      return JSON.parse(localStorage.getItem(STORAGE_REPLAYS) || '[]');
-    } catch (_) {
-      return [];
-    }
-  }
-
-  _saveLocalReplays(list) {
-    localStorage.setItem(STORAGE_REPLAYS, JSON.stringify(list));
+  _getGameTableName(roundNumber) {
+    return `game${roundNumber}_scores`;
   }
 
   // --- NORMALIZATION & VALIDATION ---
@@ -110,7 +108,7 @@ class SupabaseService {
     });
   }
 
-  // --- 1. PARTICIPANT REGISTRATION & IDENTITY ---
+  // --- 1. OPERATOR REGISTRATION & SESSION RESTORATION (Table 4: final_scores) ---
   async registerOrGetParticipant(fullName, rawEnrollment) {
     const normalizedName = this.normalizeName(fullName);
     const normalizedEnroll = this.normalizeEnrollment(rawEnrollment);
@@ -122,63 +120,126 @@ class SupabaseService {
       throw new Error('Enrollment number must be at least 3 characters.');
     }
 
-    // Try Supabase Cloud first
+    // Check Cloud Supabase final_scores table first
     if (this.isCloudConnected) {
       try {
-        const { data: existing, error: selectError } = await this.client
-          .from('participants')
-          .select('id, full_name, enrollment_number_normalized, created_at')
-          .eq('enrollment_number_normalized', normalizedEnroll)
+        const { data: existing, error: selectErr } = await this.client
+          .from('final_scores')
+          .select('*')
+          .eq('enrollment_number', normalizedEnroll)
           .maybeSingle();
 
-        if (!selectError && existing) {
-          // Participant already registered; restore session
-          return { participant: existing, isNew: false };
+        if (!selectErr && existing) {
+          const participant = {
+            id: existing.enrollment_number,
+            full_name: existing.full_name,
+            enrollment_number_normalized: existing.enrollment_number
+          };
+          this._syncLocalParticipantRecord(participant);
+          return { participant, isNew: false };
         }
 
-        if (!selectError && !existing) {
-          const newId = this.generateUUID();
-          const { data: created, error: insertError } = await this.client
-            .from('participants')
-            .insert({
-              id: newId,
-              full_name: normalizedName,
-              enrollment_number_normalized: normalizedEnroll
-            })
+        if (!selectErr && !existing) {
+          const newRecord = {
+            id: this.generateUUID(),
+            enrollment_number: normalizedEnroll,
+            full_name: normalizedName,
+            game1_score: 0,
+            game2_score: 0,
+            game3_score: 0,
+            total_score: 0,
+            average_score: 0.00,
+            rounds_completed: 0,
+            status: 'REGISTERED',
+            created_at: new Date().toISOString()
+          };
+
+          const { data: created, error: insertErr } = await this.client
+            .from('final_scores')
+            .insert(newRecord)
             .select()
             .single();
 
-          if (!insertError && created) {
-            return { participant: created, isNew: true };
+          if (!insertErr && created) {
+            const participant = {
+              id: created.enrollment_number,
+              full_name: created.full_name,
+              enrollment_number_normalized: created.enrollment_number
+            };
+            this._syncLocalParticipantRecord(participant);
+            return { participant, isNew: true };
           }
         }
       } catch (err) {
-        console.warn('[SupabaseService] Cloud participant query failed, using local store:', err);
+        console.warn('[SupabaseService] Cloud registration fallback to local:', err);
       }
     }
 
-    // Fallback: Local mirror
-    const localList = this._getLocalParticipants();
-    const existingLocal = localList.find(p => p.enrollment_number_normalized === normalizedEnroll);
+    // Local mirror fallback
+    const localFinals = this._getLocalList(STORAGE_FINAL);
+    const existingLocal = localFinals.find(f => f.enrollment_number === normalizedEnroll);
 
     if (existingLocal) {
-      return { participant: existingLocal, isNew: false };
+      const participant = {
+        id: existingLocal.enrollment_number,
+        full_name: existingLocal.full_name,
+        enrollment_number_normalized: existingLocal.enrollment_number
+      };
+      return { participant, isNew: false };
     }
 
-    const newParticipant = {
+    const newLocalRecord = {
       id: this.generateUUID(),
+      enrollment_number: normalizedEnroll,
       full_name: normalizedName,
-      enrollment_number_normalized: normalizedEnroll,
+      game1_score: 0,
+      game2_score: 0,
+      game3_score: 0,
+      total_score: 0,
+      average_score: 0.00,
+      total_time_ms: 0,
+      combined_streak: 0,
+      rounds_completed: 0,
+      status: 'REGISTERED',
       created_at: new Date().toISOString()
     };
-    localList.push(newParticipant);
-    this._saveLocalParticipants(localList);
+    localFinals.push(newLocalRecord);
+    this._saveLocalList(STORAGE_FINAL, localFinals);
 
-    return { participant: newParticipant, isNew: true };
+    const participant = {
+      id: normalizedEnroll,
+      full_name: normalizedName,
+      enrollment_number_normalized: normalizedEnroll
+    };
+    return { participant, isNew: true };
   }
 
-  async updateParticipantName(participantId, newFullName) {
+  _syncLocalParticipantRecord(participant) {
+    const list = this._getLocalList(STORAGE_FINAL);
+    const idx = list.findIndex(f => f.enrollment_number === participant.enrollment_number_normalized);
+    if (idx >= 0) {
+      list[idx].full_name = participant.full_name;
+    } else {
+      list.push({
+        id: this.generateUUID(),
+        enrollment_number: participant.enrollment_number_normalized,
+        full_name: participant.full_name,
+        game1_score: 0,
+        game2_score: 0,
+        game3_score: 0,
+        total_score: 0,
+        average_score: 0.00,
+        rounds_completed: 0,
+        status: 'REGISTERED',
+        created_at: new Date().toISOString()
+      });
+    }
+    this._saveLocalList(STORAGE_FINAL, list);
+  }
+
+  async updateParticipantName(participantIdOrEnroll, newFullName) {
     const normalizedName = this.normalizeName(newFullName);
+    const enroll = this.normalizeEnrollment(participantIdOrEnroll);
     if (!normalizedName || normalizedName.length < 2) {
       throw new Error('Operator Call Sign / Name must be at least 2 characters.');
     }
@@ -186,69 +247,101 @@ class SupabaseService {
     if (this.isCloudConnected) {
       try {
         await this.client
-          .from('participants')
+          .from('final_scores')
           .update({ full_name: normalizedName })
-          .eq('id', participantId);
+          .eq('enrollment_number', enroll);
+
+        await Promise.allSettled([
+          this.client.from('game1_scores').update({ full_name: normalizedName }).eq('enrollment_number', enroll),
+          this.client.from('game2_scores').update({ full_name: normalizedName }).eq('enrollment_number', enroll),
+          this.client.from('game3_scores').update({ full_name: normalizedName }).eq('enrollment_number', enroll)
+        ]);
       } catch (err) {
-        console.warn('[SupabaseService] Cloud participant update failed, updating local store:', err);
+        console.warn('[SupabaseService] Cloud name update warning:', err);
       }
     }
 
-    const localList = this._getLocalParticipants();
-    const target = localList.find(p => p.id === participantId);
+    const localFinals = this._getLocalList(STORAGE_FINAL);
+    const target = localFinals.find(f => f.enrollment_number === enroll);
     if (target) {
       target.full_name = normalizedName;
-      this._saveLocalParticipants(localList);
+      this._saveLocalList(STORAGE_FINAL, localFinals);
     }
 
     return normalizedName;
   }
 
-  // --- 2. OFFICIAL RESULTS & ONE-ATTEMPT CHECK ---
-  async getParticipantOfficialResults(participantId) {
-    if (!participantId) return {};
+  // --- 2. OFFICIAL ROUND SCORES (Tables 1, 2, 3: game1_scores, game2_scores, game3_scores) ---
+  async getParticipantOfficialResults(participantIdOrEnroll) {
+    const enroll = this.normalizeEnrollment(participantIdOrEnroll);
+    if (!enroll) return {};
+
+    const results = {};
 
     if (this.isCloudConnected) {
       try {
-        const { data, error } = await this.client
-          .from('game_results')
-          .select('*')
-          .eq('participant_id', participantId)
-          .eq('is_official_attempt', true);
+        const [r1Res, r2Res, r3Res] = await Promise.all([
+          this.client.from('game1_scores').select('*').eq('enrollment_number', enroll).eq('is_official_attempt', true).maybeSingle(),
+          this.client.from('game2_scores').select('*').eq('enrollment_number', enroll).eq('is_official_attempt', true).maybeSingle(),
+          this.client.from('game3_scores').select('*').eq('enrollment_number', enroll).eq('is_official_attempt', true).maybeSingle()
+        ]);
 
-        if (!error && Array.isArray(data)) {
-          const dict = {};
-          data.forEach(r => { dict[r.round_number] = r; });
-          return dict;
-        }
+        if (r1Res.data) results[1] = this._normalizeResultRecord(r1Res.data, 1, 'Server Sniper');
+        if (r2Res.data) results[2] = this._normalizeResultRecord(r2Res.data, 2, 'Pipeline Recall');
+        if (r3Res.data) results[3] = this._normalizeResultRecord(r3Res.data, 3, 'SwipeOps');
+
+        if (Object.keys(results).length > 0) return results;
       } catch (err) {
-        console.warn('[SupabaseService] Cloud game_results read failed, reading local store:', err);
+        console.warn('[SupabaseService] Cloud score read failed, reading local mirror:', err);
       }
     }
 
-    // Local fallback
-    const allResults = this._getLocalResults();
-    const participantResults = allResults.filter(
-      r => r.participant_id === participantId && r.is_official_attempt === true
-    );
-    const dict = {};
-    participantResults.forEach(r => { dict[r.round_number] = r; });
-    return dict;
+    // Local mirror check
+    [1, 2, 3].forEach(roundNum => {
+      const list = this._getLocalList(this._getGameStorageKey(roundNum));
+      const found = list.find(r => r.enrollment_number === enroll && r.is_official_attempt === true);
+      if (found) {
+        results[roundNum] = this._normalizeResultRecord(found, roundNum);
+      }
+    });
+
+    return results;
   }
 
-  async checkRoundLocked(participantId, roundNumber) {
-    if (!participantId) return { isLocked: false, officialAttempt: null, hasReplayAuthorization: false };
+  _normalizeResultRecord(raw, roundNum, defaultGameName) {
+    return {
+      id: raw.id,
+      participant_id: raw.enrollment_number,
+      enrollment_number: raw.enrollment_number,
+      round_number: raw.round_number || roundNum,
+      game_name: raw.game_name || defaultGameName || (roundNum === 1 ? 'Server Sniper' : roundNum === 2 ? 'Pipeline Recall' : 'SwipeOps'),
+      score: raw.score || 0,
+      completion_time_ms: raw.completion_time_ms || 0,
+      completion_status: raw.completion_status || 'completed',
+      streak_count: raw.streak || raw.streak_count || 0,
+      best_streak: raw.streak || raw.best_streak || 0,
+      accuracy: raw.accuracy || 0,
+      attempt_number: raw.attempt_number || 1,
+      is_official_attempt: raw.is_official_attempt !== false,
+      created_at: raw.created_at || new Date().toISOString()
+    };
+  }
 
-    // 1) Check if official attempt already exists
-    const officialResults = await this.getParticipantOfficialResults(participantId);
+  // --- 3. ROUND LOCK & ADMIN RE-LOGIN AUDIT (Table 5: admin_relogin) ---
+  async checkRoundLocked(participantIdOrEnroll, roundNumber) {
+    const enroll = this.normalizeEnrollment(participantIdOrEnroll);
+    if (!enroll) return { isLocked: false, officialAttempt: null, hasReplayAuthorization: false };
+
+    // 1) Check if official attempt exists for this round
+    const officialResults = await this.getParticipantOfficialResults(enroll);
     const officialAttempt = officialResults[roundNumber] || null;
 
     if (!officialAttempt) {
       return { isLocked: false, officialAttempt: null, hasReplayAuthorization: false };
     }
 
-    // 2) Official attempt exists. Check if an active replay authorization exists
-    const hasReplayAuth = await this.hasActiveReplayAuthorization(participantId, roundNumber);
+    // 2) Check if active pending authorization exists in admin_relogin
+    const hasReplayAuth = await this.hasActiveReplayAuthorization(enroll, roundNumber);
 
     return {
       isLocked: !hasReplayAuth,
@@ -257,36 +350,41 @@ class SupabaseService {
     };
   }
 
-  async hasActiveReplayAuthorization(participantId, roundNumber) {
+  async hasActiveReplayAuthorization(participantIdOrEnroll, roundNumber) {
+    const enroll = this.normalizeEnrollment(participantIdOrEnroll);
+    if (!enroll) return false;
+
     if (this.isCloudConnected) {
       try {
         const { data, error } = await this.client
-          .from('replay_authorizations')
+          .from('admin_relogin')
           .select('*')
-          .eq('participant_id', participantId)
+          .eq('enrollment_number', enroll)
           .or(`round_number.eq.${roundNumber},round_number.is.null`)
-          .eq('authorization_status', 'pending')
+          .eq('status', 'pending')
           .limit(1);
 
         if (!error && Array.isArray(data) && data.length > 0) {
           return true;
         }
       } catch (err) {
-        console.warn('[SupabaseService] Replay auth cloud check failed:', err);
+        console.warn('[SupabaseService] Cloud admin_relogin check failed:', err);
       }
     }
 
-    const replays = this._getLocalReplays();
-    return replays.some(
-      r => r.participant_id === participantId &&
+    const localReplays = this._getLocalList(STORAGE_ADMIN_RELOGIN);
+    return localReplays.some(
+      r => r.enrollment_number === enroll &&
            (r.round_number === roundNumber || r.round_number === null) &&
-           r.authorization_status === 'pending'
+           r.status === 'pending'
     );
   }
 
-  // --- 3. SUBMIT GAME RESULT ---
+  // --- 4. SUBMIT GAME RESULT (Into Table 1, 2, or 3, then update Table 4) ---
   async submitGameResult({
     participantId,
+    enrollmentNumber,
+    fullName,
     roundNumber,
     gameName,
     score,
@@ -302,243 +400,312 @@ class SupabaseService {
     startedAt = new Date().toISOString(),
     completedAt = new Date().toISOString()
   }) {
-    if (!participantId) throw new Error('Missing participantId');
+    const enroll = this.normalizeEnrollment(enrollmentNumber || participantId);
+    const name = this.normalizeName(fullName || 'OPERATOR');
+
+    if (!enroll) throw new Error('Missing operator enrollment number');
     if (![1, 2, 3].includes(roundNumber)) throw new Error('Invalid round number');
 
-    const resultRecord = {
+    const streakVal = Math.max(0, streakCount || bestStreak || 0);
+    const accuracyVal = totalActions > 0 ? Number(((successfulActions / totalActions) * 100).toFixed(2)) : 100.0;
+    const finalScore = Math.max(0, Math.floor(score || 0));
+    const finalDuration = Math.max(0, Math.floor(completionTimeMs || 0));
+
+    const gameRecord = {
       id: this.generateUUID(),
-      participant_id: participantId,
-      round_number: roundNumber,
-      game_name: gameName,
-      score: Math.max(0, Math.floor(score || 0)),
-      maximum_score: maximumScore,
-      completion_time_ms: Math.max(0, Math.floor(completionTimeMs || 0)),
+      enrollment_number: enroll,
+      full_name: name,
+      score: finalScore,
+      completion_time_ms: finalDuration,
+      streak: streakVal,
+      accuracy: accuracyVal,
       completion_status: completionStatus,
-      streak_count: Math.max(0, streakCount || 0),
-      best_streak: Math.max(0, bestStreak || 0),
-      successful_actions: successfulActions || 0,
-      total_actions: totalActions || 0,
-      attempt_number: attemptNumber || 1,
       is_official_attempt: Boolean(isOfficialAttempt),
-      started_at: startedAt,
-      completed_at: completedAt,
-      created_at: new Date().toISOString()
+      attempt_number: attemptNumber || 1,
+      created_at: completedAt
     };
 
-    // If this was an authorized practice replay, consume the authorization
+    const tableName = this._getGameTableName(roundNumber);
+    const storageKey = this._getGameStorageKey(roundNumber);
+
+    // Consume replay authorization if this was an authorized practice attempt
     if (!isOfficialAttempt) {
-      await this.consumeReplayAuthorization(participantId, roundNumber);
+      await this.consumeReplayAuthorization(enroll, roundNumber);
     }
 
-    // Try Supabase Cloud write
+    // Cloud submission to corresponding game table
+    let cloudSynced = false;
     if (this.isCloudConnected) {
       try {
         const { data, error } = await this.client
-          .from('game_results')
-          .insert(resultRecord)
+          .from(tableName)
+          .insert(gameRecord)
           .select()
           .single();
 
-        if (error) {
-          console.warn('[SupabaseService] Cloud submission warning, saving to local store:', error);
-        } else {
-          // Always mirror to local store as well for instant resilience
-          const localList = this._getLocalResults();
-          localList.push(data || resultRecord);
-          this._saveLocalResults(localList);
-          return { success: true, cloudSynced: true, record: data || resultRecord };
+        if (!error && data) {
+          cloudSynced = true;
+        } else if (error) {
+          console.warn(`[SupabaseService] Cloud submission to ${tableName} warning:`, error);
         }
       } catch (err) {
-        console.warn('[SupabaseService] Cloud insert threw error:', err);
+        console.warn(`[SupabaseService] Cloud submission to ${tableName} threw error:`, err);
       }
     }
 
-    // Local fallback
-    const localList = this._getLocalResults();
-    localList.push(resultRecord);
-    this._saveLocalResults(localList);
+    // Always mirror to local game storage
+    const localGameList = this._getLocalList(storageKey);
+    localGameList.push(gameRecord);
+    this._saveLocalList(storageKey, localGameList);
 
-    return { success: true, cloudSynced: false, record: resultRecord };
+    // If official attempt, update Table 4: final_scores
+    if (isOfficialAttempt) {
+      await this._syncFinalScores(enroll, name);
+    }
+
+    const normalizedResult = this._normalizeResultRecord(gameRecord, roundNumber, gameName);
+    return { success: true, cloudSynced, record: normalizedResult };
   }
 
-  // --- 4. ADMIN REPLAY AUTHORIZATION ---
-  async authorizePracticeReplay(participantId, roundNumber, passphrase, reason = 'Administrator practice grant') {
+  // Keep Table 4: final_scores updated with total score of 3/3
+  async _syncFinalScores(enroll, name) {
+    const officialResults = await this.getParticipantOfficialResults(enroll);
+    const r1 = officialResults[1];
+    const r2 = officialResults[2];
+    const r3 = officialResults[3];
+
+    const g1Score = r1 ? r1.score : 0;
+    const g2Score = r2 ? r2.score : 0;
+    const g3Score = r3 ? r3.score : 0;
+
+    const g1Time = r1 ? r1.completion_time_ms : 0;
+    const g2Time = r2 ? r2.completion_time_ms : 0;
+    const g3Time = r3 ? r3.completion_time_ms : 0;
+
+    const g1Streak = r1 ? (r1.best_streak || r1.streak_count || 0) : 0;
+    const g2Streak = r2 ? (r2.best_streak || r2.streak_count || 0) : 0;
+    const g3Streak = r3 ? (r3.best_streak || r3.streak_count || 0) : 0;
+
+    const completedRounds = [r1, r2, r3].filter(Boolean).length;
+    const totalScore = g1Score + g2Score + g3Score;
+    const averageScore = Number((totalScore / 3.0).toFixed(2));
+    const totalTimeMs = g1Time + g2Time + g3Time;
+    const combinedStreak = g1Streak + g2Streak + g3Streak;
+
+    let status = 'REGISTERED';
+    if (completedRounds === 3) status = 'COMPLETED (3/3)';
+    else if (completedRounds > 0) status = `IN PROGRESS (${completedRounds}/3)`;
+
+    const finalRecord = {
+      enrollment_number: enroll,
+      full_name: name,
+      game1_score: g1Score,
+      game2_score: g2Score,
+      game3_score: g3Score,
+      total_score: totalScore,
+      average_score: averageScore,
+      game1_time_ms: g1Time,
+      game2_time_ms: g2Time,
+      game3_time_ms: g3Time,
+      total_time_ms: totalTimeMs,
+      game1_streak: g1Streak,
+      game2_streak: g2Streak,
+      game3_streak: g3Streak,
+      combined_streak: combinedStreak,
+      rounds_completed: completedRounds,
+      status: status,
+      last_completed_at: new Date().toISOString()
+    };
+
+    if (this.isCloudConnected) {
+      try {
+        await this.client
+          .from('final_scores')
+          .upsert(finalRecord, { onConflict: 'enrollment_number' });
+      } catch (err) {
+        console.warn('[SupabaseService] Cloud final_scores sync warning:', err);
+      }
+    }
+
+    // Mirror to local final_scores list
+    const localFinals = this._getLocalList(STORAGE_FINAL);
+    const existingIdx = localFinals.findIndex(f => f.enrollment_number === enroll);
+    if (existingIdx >= 0) {
+      localFinals[existingIdx] = { ...localFinals[existingIdx], ...finalRecord };
+    } else {
+      localFinals.push({ id: this.generateUUID(), ...finalRecord, created_at: new Date().toISOString() });
+    }
+    this._saveLocalList(STORAGE_FINAL, localFinals);
+  }
+
+  // --- 5. ADMIN RE-LOGIN & REPLAY AUTHORIZATION (Table 5: admin_relogin) ---
+  async authorizePracticeReplay(participantIdOrEnroll, roundNumber, passphrase, reason = 'Administrator practice grant') {
     if (passphrase !== ADMIN_PASSPHRASE) {
       return { success: false, error: 'Invalid Administrator Key. Access Denied.' };
     }
 
+    const enroll = this.normalizeEnrollment(participantIdOrEnroll);
     const authRecord = {
       id: this.generateUUID(),
-      participant_id: participantId,
+      enrollment_number: enroll,
+      admin_key: passphrase,
       round_number: roundNumber || null,
-      authorization_status: 'pending',
-      authorized_administrator: 'SUPER_ADMIN',
-      authorization_timestamp: new Date().toISOString(),
+      action_type: 'replay',
+      status: 'pending',
       reason: reason || 'Authorized Practice Replay',
-      created_at: new Date().toISOString()
+      authorized_at: new Date().toISOString()
     };
 
     if (this.isCloudConnected) {
       try {
         const { error } = await this.client
-          .from('replay_authorizations')
+          .from('admin_relogin')
           .insert(authRecord);
 
         if (!error) {
-          const replays = this._getLocalReplays();
-          replays.push(authRecord);
-          this._saveLocalReplays(replays);
+          const list = this._getLocalList(STORAGE_ADMIN_RELOGIN);
+          list.push(authRecord);
+          this._saveLocalList(STORAGE_ADMIN_RELOGIN, list);
           return { success: true, cloudSynced: true };
         }
       } catch (err) {
-        console.warn('[SupabaseService] Cloud replay auth failed, recording locally:', err);
+        console.warn('[SupabaseService] Cloud admin_relogin insert error:', err);
       }
     }
 
-    const replays = this._getLocalReplays();
-    replays.push(authRecord);
-    this._saveLocalReplays(replays);
+    const list = this._getLocalList(STORAGE_ADMIN_RELOGIN);
+    list.push(authRecord);
+    this._saveLocalList(STORAGE_ADMIN_RELOGIN, list);
     return { success: true, cloudSynced: false };
   }
 
-  async consumeReplayAuthorization(participantId, roundNumber) {
+  async authorizeAdminRelogin(participantIdOrEnroll, passphrase, reason = 'Administrator re-login grant') {
+    if (passphrase !== ADMIN_PASSPHRASE) {
+      return { success: false, error: 'Invalid Administrator Key. Access Denied.' };
+    }
+
+    const enroll = this.normalizeEnrollment(participantIdOrEnroll);
+    const record = {
+      id: this.generateUUID(),
+      enrollment_number: enroll,
+      admin_key: passphrase,
+      round_number: null,
+      action_type: 'relogin',
+      status: 'consumed',
+      reason: reason || 'Admin re-login authorization',
+      authorized_at: new Date().toISOString()
+    };
+
+    if (this.isCloudConnected) {
+      try {
+        await this.client.from('admin_relogin').insert(record);
+      } catch (_) {}
+    }
+
+    const list = this._getLocalList(STORAGE_ADMIN_RELOGIN);
+    list.push(record);
+    this._saveLocalList(STORAGE_ADMIN_RELOGIN, list);
+    return { success: true };
+  }
+
+  async consumeReplayAuthorization(participantIdOrEnroll, roundNumber) {
+    const enroll = this.normalizeEnrollment(participantIdOrEnroll);
+    if (!enroll) return;
+
     if (this.isCloudConnected) {
       try {
         await this.client
-          .from('replay_authorizations')
+          .from('admin_relogin')
           .update({
-            authorization_status: 'consumed',
+            status: 'consumed',
             consumed_at: new Date().toISOString()
           })
-          .eq('participant_id', participantId)
+          .eq('enrollment_number', enroll)
           .or(`round_number.eq.${roundNumber},round_number.is.null`)
-          .eq('authorization_status', 'pending');
+          .eq('status', 'pending');
       } catch (_) {}
     }
 
-    const replays = this._getLocalReplays();
-    replays.forEach(r => {
-      if (r.participant_id === participantId &&
+    const list = this._getLocalList(STORAGE_ADMIN_RELOGIN);
+    list.forEach(r => {
+      if (r.enrollment_number === enroll &&
          (r.round_number === roundNumber || r.round_number === null) &&
-         r.authorization_status === 'pending') {
-        r.authorization_status = 'consumed';
+         r.status === 'pending') {
+        r.status = 'consumed';
         r.consumed_at = new Date().toISOString();
       }
     });
-    this._saveLocalReplays(replays);
+    this._saveLocalList(STORAGE_ADMIN_RELOGIN, list);
   }
 
-  // --- 5. CENTRAL LEADERBOARD & WINNER DETERMINATION ---
+  // --- 6. CENTRAL LEADERBOARD (Queried directly from Table 4: final_scores) ---
   async getLeaderboard() {
-    // Attempt to query the public.leaderboard view from Supabase
+    let rows = [];
+
+    // Attempt direct read from Table 4: final_scores
     if (this.isCloudConnected) {
       try {
         const { data, error } = await this.client
-          .from('leaderboard')
+          .from('final_scores')
           .select('*');
 
         if (!error && Array.isArray(data) && data.length > 0) {
-          return this._sortLeaderboard(data);
+          rows = data.map(r => this._mapFinalScoreToLeaderboardRow(r));
         }
       } catch (err) {
-        console.warn('[SupabaseService] Could not read view, computing dynamically:', err);
+        console.warn('[SupabaseService] Cloud leaderboard read failed, falling back:', err);
       }
     }
 
-    // Build dynamic leaderboard from participants + game_results
-    let participants = [];
-    let results = [];
-
-    if (this.isCloudConnected) {
-      try {
-        const { data: partData } = await this.client.from('participants').select('id, full_name, created_at');
-        const { data: resData } = await this.client.from('game_results').select('*').eq('is_official_attempt', true);
-        if (Array.isArray(partData) && partData.length > 0) participants = partData;
-        if (Array.isArray(resData)) results = resData;
-      } catch (_) {}
+    // Fallback to local storage Table 4 mirror
+    if (rows.length === 0) {
+      const localFinals = this._getLocalList(STORAGE_FINAL);
+      rows = localFinals.map(r => this._mapFinalScoreToLeaderboardRow(r));
     }
-
-    // Merge with local records
-    if (participants.length === 0) {
-      participants = this._getLocalParticipants();
-    }
-    if (results.length === 0) {
-      results = this._getLocalResults().filter(r => r.is_official_attempt === true);
-    }
-
-    // Compute aggregates per participant
-    const rows = [];
-    const resultMap = {};
-
-    results.forEach(res => {
-      if (!resultMap[res.participant_id]) {
-        resultMap[res.participant_id] = {};
-      }
-      resultMap[res.participant_id][res.round_number] = res;
-    });
-
-    participants.forEach(p => {
-      const pRounds = resultMap[p.id] || {};
-      const r1 = pRounds[1];
-      const r2 = pRounds[2];
-      const r3 = pRounds[3];
-
-      const r1Score = r1 ? r1.score : null;
-      const r2Score = r2 ? r2.score : null;
-      const r3Score = r3 ? r3.score : null;
-
-      const r1Time = r1 ? r1.completion_time_ms : null;
-      const r2Time = r2 ? r2.completion_time_ms : null;
-      const r3Time = r3 ? r3.completion_time_ms : null;
-
-      const r1Streak = r1 ? r1.best_streak : 0;
-      const r2Streak = r2 ? r2.best_streak : 0;
-      const r3Streak = r3 ? r3.best_streak : 0;
-
-      const completedCount = [r1, r2, r3].filter(Boolean).length;
-      if (completedCount === 0) return; // Only show participants who played at least 1 round
-
-      const totalRawScore = (r1Score || 0) + (r2Score || 0) + (r3Score || 0);
-      const avgScore = Number((totalRawScore / 3.0).toFixed(2));
-      const totalTimeMs = (r1Time || 0) + (r2Time || 0) + (r3Time || 0);
-      const combinedStreak = r1Streak + r2Streak + r3Streak;
-
-      const completedTimestamps = [r1, r2, r3].filter(Boolean).map(r => new Date(r.completed_at).getTime());
-      const lastCompletedAt = completedTimestamps.length > 0 ? new Date(Math.max(...completedTimestamps)).toISOString() : p.created_at;
-
-      rows.push({
-        participant_id: p.id,
-        full_name: p.full_name,
-        round_1_score: r1Score,
-        round_2_score: r2Score,
-        round_3_score: r3Score,
-        total_raw_score: totalRawScore,
-        average_score: avgScore,
-        round_1_time_ms: r1Time,
-        round_2_time_ms: r2Time,
-        round_3_time_ms: r3Time,
-        total_completion_time_ms: totalTimeMs,
-        round_1_streak: r1Streak,
-        round_2_streak: r2Streak,
-        round_3_streak: r3Streak,
-        combined_streak: combinedStreak,
-        completed_rounds_count: completedCount,
-        completion_status: completedCount === 3 ? 'COMPLETED (3/3)' : `IN PROGRESS (${completedCount}/3)`,
-        last_completed_at: lastCompletedAt
-      });
-    });
 
     return this._sortLeaderboard(rows);
   }
 
+  _mapFinalScoreToLeaderboardRow(r) {
+    const r1 = r.game1_score !== undefined && r.game1_score !== null ? r.game1_score : null;
+    const r2 = r.game2_score !== undefined && r.game2_score !== null ? r.game2_score : null;
+    const r3 = r.game3_score !== undefined && r.game3_score !== null ? r.game3_score : null;
+
+    const completed = r.rounds_completed || [r1, r2, r3].filter(s => s !== null && s > 0).length;
+
+    return {
+      participant_id: r.id || r.enrollment_number,
+      full_name: r.full_name,
+      round_1_score: r1,
+      round_2_score: r2,
+      round_3_score: r3,
+      total_raw_score: r.total_score || (Number(r1 || 0) + Number(r2 || 0) + Number(r3 || 0)),
+      average_score: Number(r.average_score || 0),
+      round_1_time_ms: r.game1_time_ms || 0,
+      round_2_time_ms: r.game2_time_ms || 0,
+      round_3_time_ms: r.game3_time_ms || 0,
+      total_completion_time_ms: r.total_time_ms || 0,
+      round_1_streak: r.game1_streak || 0,
+      round_2_streak: r.game2_streak || 0,
+      round_3_streak: r.game3_streak || 0,
+      combined_streak: r.combined_streak || 0,
+      completed_rounds_count: completed,
+      completion_status: r.status || (completed === 3 ? 'COMPLETED (3/3)' : `IN PROGRESS (${completed}/3)`),
+      last_completed_at: r.last_completed_at || r.created_at || new Date().toISOString()
+    };
+  }
+
   // Sort strictly using Techverse rules:
-  // 1. Average score (descending)
-  // 2. Total completion time ms (ascending)
-  // 3. Combined streak metric (descending)
-  // 4. Earlier verified completion timestamp (ascending)
+  // 1. Full completions (3/3) prioritized over in-progress
+  // 2. Average score (descending)
+  // 3. Total completion time ms (ascending)
+  // 4. Combined streak metric (descending)
+  // 5. Earlier verified completion timestamp (ascending)
   _sortLeaderboard(rows) {
-    const sorted = [...rows].sort((a, b) => {
-      // Prioritize full completions (3/3)
+    // Exclude participants with 0 rounds played
+    const activeRows = rows.filter(r => (r.completed_rounds_count || 0) > 0 || r.total_raw_score > 0);
+
+    const sorted = [...activeRows].sort((a, b) => {
       const aDone = a.completed_rounds_count === 3 ? 1 : 0;
       const bDone = b.completed_rounds_count === 3 ? 1 : 0;
       if (aDone !== bDone) return bDone - aDone;

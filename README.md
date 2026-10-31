@@ -68,10 +68,11 @@ The portal strictly enforces the official four-tier tournament ranking specifica
 
 All tournament records are stored in a single PostgreSQL database schema with Row Level Security (RLS):
 
-- **`public.participants`**: Canonical operator record (`id` UUID, `full_name`, `enrollment_number_normalized` UNIQUE, timestamps).
-- **`public.game_results`**: Immutable score ledger (`participant_id`, `round_number`, `score`, `duration_ms`, `streak`, `is_official_attempt`). Enforces `UNIQUE(participant_id, round_number)` for official attempts.
-- **`public.replay_authorizations`**: Cryptographically validated audit trail of event administrator clearances for practice replays.
-- **`public.leaderboard`**: Secure PostgreSQL View compiling the 4-tier ranking, filtering masked identities, and prioritizing completed (3/3) over partial runs.
+- **`public.game1_scores`**: Round 1 (Server Sniper) scores, durations, streaks, accuracy, and official attempt uniqueness.
+- **`public.game2_scores`**: Round 2 (Pipeline Recall) scores, durations, streaks, accuracy, and official attempt uniqueness.
+- **`public.game3_scores`**: Round 3 (SwipeOps) scores, durations, streaks, accuracy, and official attempt uniqueness.
+- **`public.final_scores`**: 4th table for final score = total score of 3/3, average score ((R1+R2+R3)/3), total time, combined streak, rounds completed, and leaderboard rank.
+- **`public.admin_relogin`**: 5th table for operator re-login and practice replay authorizations by administrator key (`SHAURYA@GAME999`).
 
 To initialize or review the database schema, execute the SQL script in [`supabase_schema.sql`](file:///Users/shaurya_bansal/comb_game/supabase_schema.sql).
 
