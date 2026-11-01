@@ -1,18 +1,20 @@
 /**
- * TECHVERSE ’26 — Slow DevOps Terminal Digital Rain
- * Atmospheric, slow-moving, dark-mode terminal matrix rain.
- * Deep black and navy background with muted cyan, teal, blue, and occasional violet glyphs.
- * Configurable, deltaTime timestep-controlled, accessible, and ultra-smooth.
+ * TECHVERSE ’26 — DevOps Matrix Digital Rain
+ * High-performance, atmospheric terminal code rain featuring prominent DevOps keywords:
+ * build, test, deploy, kubernetes, docker, kubectl, pod, logs, k8s, CI/CD, git push, YAML, etc.
+ * Features dynamic speed tiers, rich cyan/teal/blue/violet palette, and immediate full-viewport presence.
  */
 
-const DEVOPS_WORDS = [
-  'main', 'logs', 'pod', 'deploy', 'docker', 'test',
-  'k8s', 'git', 'ci', 'cd', 'node', 'tls', 'helm', 'sync',
-  'kubectl', 'DEPLOY', 'BUILD_OK', '0x7FA2'
+const DEVOPS_TOKENS = [
+  'kubernetes', 'docker', 'deploy', 'build', 'test',
+  'kubectl', 'pod', 'logs', 'k8s', 'CI/CD', 'git push',
+  'release', 'helm', 'YAML', 'main', 'env', 'cluster',
+  'BUILD_OK', 'DEPLOY', '0x7FA2', '01', '{}', '</>',
+  'docker run', 'git commit', 'terraform', 'prometheus', 'grafana'
 ];
 
 const DEVOPS_SYMBOLS = [
-  '{', '}', '[', ']', '$', '>', '/', '#', ':', '=', '01', '0', '1'
+  '{', '}', '[', ']', '$', '>', '/', '#', ':', '=', '01', '0', '1', '</>', '::', '->', '~', '&&'
 ];
 
 export class DevopsRain {
@@ -27,15 +29,15 @@ export class DevopsRain {
     this.prefersReducedMotion = false;
     this.lastTimestamp = 0;
 
-    // Configurable parameters
+    // Configurable parameters with dynamic speeds
     this.config = {
-      columnSpacing: options.columnSpacing || 38,     // Sparse vertical columns
-      minSpeed: options.minSpeed || 9,                // Pixels per second (calm & tranquil)
-      maxSpeed: options.maxSpeed || 20,               // Pixels per second
-      slotHeight: options.slotHeight || 18,           // Vertical spacing between characters
-      fontSize: options.fontSize || 12,               // Clean thin typography
-      wordColumnChance: options.wordColumnChance || 0.35, // 35% word streams, 65% symbols
-      glowRate: options.glowRate || 0.05,             // Only 5% of columns have subtle cyan glow
+      columnSpacing: options.columnSpacing || 36,     // Spacing between column streams
+      minSpeed: options.minSpeed || 55,               // Pixels per second (dynamic, fluid fall)
+      maxSpeed: options.maxSpeed || 135,              // Pixels per second
+      fastSpeed: options.fastSpeed || 210,            // Fast highlight streams
+      slotHeight: options.slotHeight || 20,           // Vertical spacing between items
+      fontSize: options.fontSize || 12,               // Clean, legible typography
+      tokenRatio: options.tokenRatio || 0.45,         // 45% of items are full DevOps words
       ...options
     };
 
@@ -69,7 +71,6 @@ export class DevopsRain {
   handleResize() {
     if (!this.canvas) return;
 
-    // Responsive width and height
     this.width = this.canvas.width = window.innerWidth;
     this.height = this.canvas.height = window.innerHeight;
 
@@ -79,59 +80,52 @@ export class DevopsRain {
 
     this.columns = [];
 
-    // Pre-populate sparse columns
     for (let i = 0; i < colCount; i++) {
-      // Keep only ~65% of potential column slots active so the rain feels sparse and calm
-      const isActive = Math.random() < 0.68;
+      // 85% of columns active across screen width
+      const isActive = Math.random() < 0.85;
       if (!isActive) continue;
 
-      const isWordCol = Math.random() < this.config.wordColumnChance;
-      const isViolet = Math.random() < 0.12;
-      const hasGlow = Math.random() < this.config.glowRate;
-
-      // Color themes: muted cyan/teal, deep dim blue, and occasional violet
-      let baseColor = '14, 116, 144'; // Muted dark teal
-      if (isViolet) {
-        baseColor = '139, 92, 246'; // Occasional soft violet
-      } else if (Math.random() < 0.4) {
-        baseColor = '30, 75, 120'; // Deep ambient blue
-      } else if (Math.random() < 0.3) {
-        baseColor = '6, 182, 212'; // Muted cyan
-      }
+      const isFast = Math.random() < 0.20; // 20% fast highlight streams
+      const speed = isFast 
+        ? this.config.fastSpeed * (0.85 + Math.random() * 0.3)
+        : this.config.minSpeed + Math.random() * (this.config.maxSpeed - this.config.minSpeed);
 
       const streamLength = Math.floor(Math.random() * 12 + 10);
-      const speed = this.config.minSpeed + Math.random() * (this.config.maxSpeed - this.config.minSpeed);
+      const items = [];
 
-      // Pre-fill initial glyphs for this column
-      const glyphs = [];
-      if (isWordCol) {
-        const word = DEVOPS_WORDS[Math.floor(Math.random() * DEVOPS_WORDS.length)];
-        for (let w = 0; w < streamLength; w++) {
-          glyphs.push(word[w % word.length]);
-        }
-      } else {
-        for (let s = 0; s < streamLength; s++) {
-          glyphs.push(DEVOPS_SYMBOLS[Math.floor(Math.random() * DEVOPS_SYMBOLS.length)]);
-        }
+      for (let j = 0; j < streamLength; j++) {
+        const isToken = Math.random() < this.config.tokenRatio;
+        const text = isToken 
+          ? DEVOPS_TOKENS[Math.floor(Math.random() * DEVOPS_TOKENS.length)]
+          : DEVOPS_SYMBOLS[Math.floor(Math.random() * DEVOPS_SYMBOLS.length)];
+
+        // Dynamic color palette: Cyan (dominant), Teal, Blue, and Violet
+        const roll = Math.random();
+        let colorRgb = '56, 189, 248'; // Bright cyan (#38bdf8)
+        if (roll < 0.40) colorRgb = '45, 212, 191'; // Teal (#2dd4bf)
+        else if (roll < 0.70) colorRgb = '96, 165, 250'; // Light blue (#60a5fa)
+        else if (roll < 0.88) colorRgb = '192, 132, 252'; // Violet (#c084fc)
+
+        items.push({
+          text,
+          isToken,
+          colorRgb,
+          glitchTimer: Math.random() * 2000 + 800
+        });
       }
 
       this.columns.push({
         x: Math.round(i * spacing + (spacing / 2)),
-        // Stagger positions across full height so animation is immediately populated
-        y: Math.random() * (this.height + 200) - 100,
-        speed: speed, // Pixels per second
+        // Stagger immediately across the entire screen height so rain is falling right away
+        y: Math.random() * (this.height + 400) - 200,
+        speed: speed,
         streamLength: streamLength,
-        glyphs: glyphs,
-        baseColor: baseColor,
-        hasGlow: hasGlow,
-        isWordCol: isWordCol,
-        alphaMultiplier: Math.random() * 0.25 + 0.35, // 0.35 to 0.60
-        // Slow glyph mutation timer
-        nextMutateTime: Math.random() * 2000 + 1000
+        items: items,
+        isFast: isFast,
+        alphaBase: isFast ? 0.85 : (Math.random() * 0.25 + 0.55)
       });
     }
 
-    // Paint initial dark deep navy/black canvas backdrop
     this.drawDeepBackdrop();
 
     if (this.prefersReducedMotion) {
@@ -144,7 +138,7 @@ export class DevopsRain {
     const ctx = this.ctx;
     const grad = ctx.createLinearGradient(0, 0, 0, this.height);
     grad.addColorStop(0, '#020409');
-    grad.addColorStop(0.45, '#030816');
+    grad.addColorStop(0.5, '#030816');
     grad.addColorStop(1, '#010307');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, this.width, this.height);
@@ -171,15 +165,16 @@ export class DevopsRain {
     this.drawDeepBackdrop();
 
     const ctx = this.ctx;
-    ctx.font = `${this.config.fontSize}px "JetBrains Mono", "Fira Code", monospace`;
+    ctx.font = `600 ${this.config.fontSize}px "JetBrains Mono", "Fira Code", monospace`;
+    ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
 
     for (let col of this.columns) {
-      for (let j = 0; j < col.glyphs.length; j++) {
-        const glyphY = (col.y + (j * this.config.slotHeight)) % this.height;
-        const alpha = (0.12 * (1 - (j / col.streamLength))).toFixed(3);
-        ctx.fillStyle = `rgba(${col.baseColor}, ${alpha})`;
-        ctx.fillText(col.glyphs[j], col.x, glyphY);
+      for (let j = 0; j < col.items.length; j++) {
+        const item = col.items[j];
+        const itemY = (col.y + (j * this.config.slotHeight)) % this.height;
+        ctx.fillStyle = `rgba(${item.colorRgb}, 0.25)`;
+        ctx.fillText(item.text, col.x, itemY);
       }
     }
   }
@@ -188,7 +183,7 @@ export class DevopsRain {
     if (this.isPaused || this.prefersReducedMotion) return;
 
     if (!this.lastTimestamp) this.lastTimestamp = timestamp;
-    const deltaMs = Math.min(timestamp - this.lastTimestamp, 64); // Clamped delta to avoid skips
+    const deltaMs = Math.min(timestamp - this.lastTimestamp, 64);
     const deltaSec = deltaMs / 1000;
     this.lastTimestamp = timestamp;
 
@@ -197,81 +192,74 @@ export class DevopsRain {
     const height = this.height;
     const slotH = this.config.slotHeight;
 
-    // Atmospheric dark dissolving veil: fades trails slowly into deep black/navy
-    ctx.fillStyle = 'rgba(2, 4, 10, 0.08)';
+    // Atmospheric dark dissolution veil
+    ctx.fillStyle = 'rgba(2, 4, 10, 0.14)';
     ctx.fillRect(0, 0, width, height);
 
-    ctx.font = `${this.config.fontSize}px "JetBrains Mono", "Fira Code", monospace`;
+    ctx.font = `600 ${this.config.fontSize}px "JetBrains Mono", "Fira Code", monospace`;
+    ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
 
     for (let i = 0; i < this.columns.length; i++) {
       const col = this.columns[i];
 
-      // Very slow, smooth downward drift (pixels per second * deltaSeconds)
+      // Smooth, responsive downward movement
       col.y += col.speed * deltaSec;
 
-      // Subtle glyph mutation over time for realistic live terminal effect
-      col.nextMutateTime -= deltaMs;
-      if (col.nextMutateTime <= 0) {
-        col.nextMutateTime = Math.random() * 3000 + 1500;
-        const mutateIndex = Math.floor(Math.random() * col.glyphs.length);
-        if (col.isWordCol) {
-          const word = DEVOPS_WORDS[Math.floor(Math.random() * DEVOPS_WORDS.length)];
-          col.glyphs[mutateIndex] = word[mutateIndex % word.length];
-        } else {
-          col.glyphs[mutateIndex] = DEVOPS_SYMBOLS[Math.floor(Math.random() * DEVOPS_SYMBOLS.length)];
+      const totalItems = col.items.length;
+
+      for (let j = 0; j < totalItems; j++) {
+        const item = col.items[j];
+        const itemY = col.y - (j * slotH);
+
+        if (itemY < -30 || itemY > height + 30) continue;
+
+        // Periodic glitch/mutation into new DevOps terms or symbols
+        item.glitchTimer -= deltaMs;
+        if (item.glitchTimer <= 0) {
+          item.glitchTimer = Math.random() * 2500 + 1000;
+          if (item.isToken) {
+            item.text = DEVOPS_TOKENS[Math.floor(Math.random() * DEVOPS_TOKENS.length)];
+          } else {
+            item.text = DEVOPS_SYMBOLS[Math.floor(Math.random() * DEVOPS_SYMBOLS.length)];
+          }
         }
-      }
-
-      // Render vertical stream of glyphs
-      for (let j = 0; j < col.glyphs.length; j++) {
-        const charY = col.y - (j * slotH);
-
-        // Skip characters outside visible screen
-        if (charY < -20 || charY > height + 20) continue;
 
         const isHead = j === 0;
-        const progress = j / col.streamLength;
-        const fade = Math.pow(1 - progress, 1.35);
-        const alpha = Math.max(0.04, col.alphaMultiplier * fade);
+        const progress = 1 - (j / totalItems);
+        const alpha = Math.max(0.12, progress * col.alphaBase);
 
-        if (isHead && col.hasGlow) {
-          // Rare, calm subtle cyan glow at leading head
-          ctx.fillStyle = '#67e8f9';
-          ctx.shadowColor = 'rgba(6, 182, 212, 0.55)';
-          ctx.shadowBlur = 5;
-          ctx.fillText(col.glyphs[j], col.x, charY);
+        if (isHead) {
+          // Luminous leading item with glowing cyan edge
+          ctx.fillStyle = col.isFast ? '#FFFFFF' : '#E0F8FF';
+          ctx.shadowColor = '#38bdf8';
+          ctx.shadowBlur = col.isFast ? 12 : 7;
+          ctx.fillText(item.text, col.x, itemY);
           ctx.shadowBlur = 0;
-        } else if (isHead) {
-          // Normal clean leading character (slightly brighter)
-          ctx.fillStyle = `rgba(103, 232, 249, ${(alpha * 1.5).toFixed(3)})`;
-          ctx.fillText(col.glyphs[j], col.x, charY);
         } else {
-          // Softly trailing dim characters blending into the background
-          ctx.fillStyle = `rgba(${col.baseColor}, ${alpha.toFixed(3)})`;
-          ctx.fillText(col.glyphs[j], col.x, charY);
+          // Trailing DevOps tokens: crisp, readable, and beautifully shaded
+          const tokenAlpha = item.isToken ? Math.min(0.95, alpha * 1.35) : alpha;
+          ctx.fillStyle = `rgba(${item.colorRgb}, ${tokenAlpha.toFixed(3)})`;
+          ctx.fillText(item.text, col.x, itemY);
         }
       }
 
-      // Smooth reset once stream has completely cascaded off-screen
-      const tailY = col.y - (col.streamLength * slotH);
-      if (tailY > height + 30) {
-        col.y = -Math.random() * 150 - 20;
-        col.speed = this.config.minSpeed + Math.random() * (this.config.maxSpeed - this.config.minSpeed);
-        col.hasGlow = Math.random() < this.config.glowRate;
-        col.isWordCol = Math.random() < this.config.wordColumnChance;
-        
-        // Re-generate fresh stream glyphs
-        if (col.isWordCol) {
-          const word = DEVOPS_WORDS[Math.floor(Math.random() * DEVOPS_WORDS.length)];
-          for (let w = 0; w < col.streamLength; w++) {
-            col.glyphs[w] = word[w % word.length];
-          }
-        } else {
-          for (let s = 0; s < col.streamLength; s++) {
-            col.glyphs[s] = DEVOPS_SYMBOLS[Math.floor(Math.random() * DEVOPS_SYMBOLS.length)];
-          }
-        }
+      // Smooth reset when column flows past viewport bottom
+      const tailY = col.y - (totalItems * slotH);
+      if (tailY > height + 40) {
+        col.y = -Math.random() * 180 - 20;
+        col.isFast = Math.random() < 0.20;
+        col.speed = col.isFast 
+          ? this.config.fastSpeed * (0.85 + Math.random() * 0.3)
+          : this.config.minSpeed + Math.random() * (this.config.maxSpeed - this.config.minSpeed);
+
+        // Regenerate items with fresh DevOps terms on reset
+        col.items.forEach(item => {
+          item.isToken = Math.random() < this.config.tokenRatio;
+          item.text = item.isToken 
+            ? DEVOPS_TOKENS[Math.floor(Math.random() * DEVOPS_TOKENS.length)]
+            : DEVOPS_SYMBOLS[Math.floor(Math.random() * DEVOPS_SYMBOLS.length)];
+        });
       }
     }
 
