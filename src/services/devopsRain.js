@@ -29,13 +29,13 @@ export class DevopsRain {
     this.prefersReducedMotion = false;
     this.lastTimestamp = 0;
 
-    // Configurable parameters with dynamic speeds, sparse density, and crisp rendering
+    // Configurable parameters with dynamic speeds, rich density, and crisp rendering
     this.config = {
-      columnSpacing: options.columnSpacing || 72,     // Spacing between column streams (sparse, elegant)
+      columnSpacing: options.columnSpacing || 48,     // Rich, balanced column spacing
       minSpeed: options.minSpeed || 55,               // Pixels per second (dynamic, fluid fall)
       maxSpeed: options.maxSpeed || 135,              // Pixels per second
       fastSpeed: options.fastSpeed || 210,            // Fast highlight streams
-      slotHeight: options.slotHeight || 22,           // Vertical spacing between items
+      slotHeight: options.slotHeight || 21,           // Vertical spacing between items
       fontSize: options.fontSize || 12,               // Clean, legible typography
       tokenRatio: options.tokenRatio || 0.45,         // 45% of items are full DevOps words
       ...options
@@ -87,23 +87,23 @@ export class DevopsRain {
     }
 
     const isMobile = this.width < 768;
-    const spacing = isMobile ? 55 : this.config.columnSpacing;
+    const spacing = isMobile ? 38 : this.config.columnSpacing;
     const colCount = Math.floor(this.width / spacing);
 
     this.columns = [];
 
     for (let i = 0; i < colCount; i++) {
-      // 52% sparse distribution across screen width (clean, breathable density)
-      const isActive = Math.random() < 0.52;
+      // 72% density distribution across screen width (full, atmospheric terminal feel)
+      const isActive = Math.random() < 0.72;
       if (!isActive) continue;
 
-      const isFast = Math.random() < 0.18; // Fast highlight streams
+      const isFast = Math.random() < 0.20; // Fast highlight streams
       const speed = isFast 
         ? this.config.fastSpeed * (0.85 + Math.random() * 0.3)
         : this.config.minSpeed + Math.random() * (this.config.maxSpeed - this.config.minSpeed);
 
-      // Shorter, cleaner streams (5 to 11 items) for an uncluttered aesthetic
-      const streamLength = Math.floor(Math.random() * 6 + 5);
+      // Balanced stream length (8 to 16 items)
+      const streamLength = Math.floor(Math.random() * 8 + 8);
       const items = [];
 
       for (let j = 0; j < streamLength; j++) {
@@ -205,8 +205,8 @@ export class DevopsRain {
     const height = this.height;
     const slotH = this.config.slotHeight;
 
-    // Atmospheric dark dissolution veil (cleaner fade prevents blurry smearing)
-    ctx.fillStyle = 'rgba(2, 4, 10, 0.30)';
+    // Atmospheric dark dissolution veil (balanced persistence & crisp rendering)
+    ctx.fillStyle = 'rgba(2, 4, 10, 0.25)';
     ctx.fillRect(0, 0, width, height);
 
     ctx.font = `600 ${this.config.fontSize}px "JetBrains Mono", "Fira Code", monospace`;
