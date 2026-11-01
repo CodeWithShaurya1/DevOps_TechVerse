@@ -307,7 +307,14 @@ BEGIN
     WHERE enrollment_number = r_enroll AND is_official_attempt = true
     ORDER BY created_at DESC LIMIT 1;
 
-    IF FOUND THEN
+    IF NOT FOUND THEN
+        SELECT score, completion_time_ms, streak, created_at INTO r1
+        FROM public.game1_scores
+        WHERE enrollment_number = r_enroll
+        ORDER BY score DESC, created_at DESC LIMIT 1;
+    END IF;
+
+    IF r1 IS NOT NULL AND r1.score IS NOT NULL THEN
         r_completed := r_completed + 1;
         r_g1_score := r1.score;
         r_g1_time := r1.completion_time_ms;
@@ -321,7 +328,14 @@ BEGIN
     WHERE enrollment_number = r_enroll AND is_official_attempt = true
     ORDER BY created_at DESC LIMIT 1;
 
-    IF FOUND THEN
+    IF NOT FOUND THEN
+        SELECT score, completion_time_ms, streak, created_at INTO r2
+        FROM public.game2_scores
+        WHERE enrollment_number = r_enroll
+        ORDER BY score DESC, created_at DESC LIMIT 1;
+    END IF;
+
+    IF r2 IS NOT NULL AND r2.score IS NOT NULL THEN
         r_completed := r_completed + 1;
         r_g2_score := r2.score;
         r_g2_time := r2.completion_time_ms;
@@ -335,7 +349,14 @@ BEGIN
     WHERE enrollment_number = r_enroll AND is_official_attempt = true
     ORDER BY created_at DESC LIMIT 1;
 
-    IF FOUND THEN
+    IF NOT FOUND THEN
+        SELECT score, completion_time_ms, streak, created_at INTO r3
+        FROM public.game3_scores
+        WHERE enrollment_number = r_enroll
+        ORDER BY score DESC, created_at DESC LIMIT 1;
+    END IF;
+
+    IF r3 IS NOT NULL AND r3.score IS NOT NULL THEN
         r_completed := r_completed + 1;
         r_g3_score := r3.score;
         r_g3_time := r3.completion_time_ms;

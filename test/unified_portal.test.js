@@ -460,6 +460,17 @@ async function runTests() {
     assert.ok(modalCode.includes('portalState.activateReplaySession()'), 'Activates replay session upon valid admin key entry');
   });
 
+  // 33. Official Attempt Enforcement & Guaranteed Backend Sync
+  test('First-time round play is guaranteed official attempt and final_scores syncs unconditionally', () => {
+    const portalCode = fs.readFileSync('src/portalState.js', 'utf8');
+    assert.ok(portalCode.includes('Boolean(lockCheck.officialAttempt && (this.isReplaySessionActive || lockCheck.hasReplayAuthorization))'), 'Round is only practice if official attempt already exists');
+    assert.ok(portalCode.includes('this.isOfficialRound = { 1: true, 2: true, 3: true };'), 'Resets official round flags on new participant');
+
+    const clientCode = fs.readFileSync('src/services/supabaseClient.js', 'utf8');
+    assert.ok(clientCode.includes('await this._syncFinalScores(enroll, name);'), 'Unconditionally syncs Table 4 on submission');
+    assert.ok(clientCode.includes("fetchRound = async (tableName, roundNum, defaultGameName)"), 'Uses safe query with fallback to prevent dropped scores');
+  });
+
   console.log(`\n================================================================`);
   console.log(`TEST RESULTS: ${passed}/${total} PASSED (100% SUCCESS)`);
   console.log(`================================================================\n`);

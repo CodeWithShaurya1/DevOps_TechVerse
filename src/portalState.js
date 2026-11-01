@@ -134,8 +134,18 @@ class PortalStateManager {
 
   setParticipant(participant) {
     this.participant = participant;
+    this.isReplaySessionActive = false;
+    this.isOfficialRound = { 1: true, 2: true, 3: true };
     if (typeof sessionStorage !== 'undefined') {
       sessionStorage.setItem(SESSION_PARTICIPANT_KEY, JSON.stringify(participant));
+      // Remove any stale replay session key if from another enrollment
+      try {
+        const replay = JSON.parse(sessionStorage.getItem('techverse_active_replay_session') || '{}');
+        const curEnroll = participant.enrollment_number_normalized || participant.enrollment || participant.id;
+        if (replay && replay.enrollmentNumber && replay.enrollmentNumber !== curEnroll) {
+          sessionStorage.removeItem('techverse_active_replay_session');
+        }
+      } catch (_) {}
     }
     this._fetchOfficialResults();
     this.notify();
@@ -206,19 +216,7 @@ class PortalStateManager {
       return { allowed: false, reason: 'unregistered' };
     }
 
-    // Continuous replay session active: unlock all rounds without prompting for key again!
-    if (this.isReplaySessionActive) {
-      this.isOfficialRound[roundNumber] = false;
-      if (typeof sessionStorage !== 'undefined') {
-        sessionStorage.setItem(
-          SESSION_OFFICIAL_ATTEMPT_PREFIX + roundNumber,
-          'false'
-        );
-      }
-      return { allowed: true, isOfficial: false };
-    }
-
-    // Check if official attempt is locked
+    // Check if official attempt is locked or already exists
     const lockCheck = await supabaseService.checkRoundLocked(this.participant.id, roundNumber);
 
     if (lockCheck.isLocked) {
@@ -229,8 +227,9 @@ class PortalStateManager {
       };
     }
 
-    // Set whether this attempt is official or practice
-    const isPractice = lockCheck.hasReplayAuthorization;
+    // CRITICAL: An attempt can ONLY be a practice replay if an official attempt ALREADY EXISTS!
+    // If the participant has NO official attempt yet, this attempt MUST be official!
+    const isPractice = Boolean(lockCheck.officialAttempt && (this.isReplaySessionActive || lockCheck.hasReplayAuthorization));
     if (isPractice) {
       this.activateReplaySession();
     }
@@ -328,9 +327,10 @@ class PortalStateManager {
       completedAt: new Date().toISOString()
     });
 
-    if (isOfficial) {
+    if (isOfficial || !this.roundResults[roundNumber]) {
       this.roundResults[roundNumber] = res.record;
     }
+    await this._fetchOfficialResults();
 
     this.notify();
     return res;

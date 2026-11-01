@@ -176,15 +176,15 @@ class SupabaseService {
 
           const { data: created, error: insertErr } = await this.client
             .from('final_scores')
-            .insert(newRecord)
+            .upsert(newRecord, { onConflict: 'enrollment_number' })
             .select()
-            .single();
+            .limit(1);
 
-          if (!insertErr && created) {
+          if (!insertErr && created && created.length > 0) {
             const participant = {
-              id: created.enrollment_number,
-              full_name: created.full_name,
-              enrollment_number_normalized: created.enrollment_number
+              id: created[0].enrollment_number,
+              full_name: created[0].full_name,
+              enrollment_number_normalized: created[0].enrollment_number
             };
             this._syncLocalParticipantRecord(participant);
             return { participant, isNew: true };
@@ -366,15 +366,45 @@ class SupabaseService {
 
     if (this.isCloudConnected) {
       try {
-        const [r1Res, r2Res, r3Res] = await Promise.all([
-          this.client.from('game1_scores').select('*').eq('enrollment_number', enroll).eq('is_official_attempt', true).maybeSingle(),
-          this.client.from('game2_scores').select('*').eq('enrollment_number', enroll).eq('is_official_attempt', true).maybeSingle(),
-          this.client.from('game3_scores').select('*').eq('enrollment_number', enroll).eq('is_official_attempt', true).maybeSingle()
+        const fetchRound = async (tableName, roundNum, defaultGameName) => {
+          // 1. Primary: query attempt marked as official
+          const { data: offData, error: offErr } = await this.client
+            .from(tableName)
+            .select('*')
+            .eq('enrollment_number', enroll)
+            .eq('is_official_attempt', true)
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+          if (!offErr && offData && offData.length > 0) {
+            return this._normalizeResultRecord(offData[0], roundNum, defaultGameName);
+          }
+
+          // 2. Fallback: if no attempt was flagged official, pick highest score record so participant data is never lost
+          const { data: fbData, error: fbErr } = await this.client
+            .from(tableName)
+            .select('*')
+            .eq('enrollment_number', enroll)
+            .order('score', { ascending: false })
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+          if (!fbErr && fbData && fbData.length > 0) {
+            return this._normalizeResultRecord(fbData[0], roundNum, defaultGameName);
+          }
+
+          return null;
+        };
+
+        const [r1, r2, r3] = await Promise.all([
+          fetchRound('game1_scores', 1, 'Server Sniper'),
+          fetchRound('game2_scores', 2, 'Pipeline Recall'),
+          fetchRound('game3_scores', 3, 'SwipeOps')
         ]);
 
-        if (r1Res.data) results[1] = this._normalizeResultRecord(r1Res.data, 1, 'Server Sniper');
-        if (r2Res.data) results[2] = this._normalizeResultRecord(r2Res.data, 2, 'Pipeline Recall');
-        if (r3Res.data) results[3] = this._normalizeResultRecord(r3Res.data, 3, 'SwipeOps');
+        if (r1) results[1] = r1;
+        if (r2) results[2] = r2;
+        if (r3) results[3] = r3;
 
         if (Object.keys(results).length > 0) return results;
       } catch (err) {
@@ -385,7 +415,12 @@ class SupabaseService {
     // Local mirror check
     [1, 2, 3].forEach(roundNum => {
       const list = this._getLocalList(this._getGameStorageKey(roundNum));
-      const found = list.find(r => r.enrollment_number === enroll && r.is_official_attempt === true);
+      let found = list.find(r => r.enrollment_number === enroll && r.is_official_attempt === true);
+      if (!found) {
+        found = list
+          .filter(r => r.enrollment_number === enroll)
+          .sort((a, b) => (b.score || 0) - (a.score || 0))[0];
+      }
       if (found) {
         results[roundNum] = this._normalizeResultRecord(found, roundNum);
       }
@@ -570,10 +605,8 @@ class SupabaseService {
     localGameList.push(gameRecord);
     this._saveLocalList(storageKey, localGameList);
 
-    // If official attempt, update Table 4: final_scores
-    if (isOfficialAttempt) {
-      await this._syncFinalScores(enroll, name);
-    }
+    // Keep Table 4: final_scores ALWAYS in real-time sync
+    await this._syncFinalScores(enroll, name);
 
     const normalizedResult = this._normalizeResultRecord(gameRecord, roundNumber, gameName);
     return { success: true, cloudSynced, record: normalizedResult };
