@@ -29,13 +29,13 @@ export class DevopsRain {
     this.prefersReducedMotion = false;
     this.lastTimestamp = 0;
 
-    // Configurable parameters with dynamic speeds
+    // Configurable parameters with dynamic speeds, sparse density, and crisp rendering
     this.config = {
-      columnSpacing: options.columnSpacing || 36,     // Spacing between column streams
+      columnSpacing: options.columnSpacing || 72,     // Spacing between column streams (sparse, elegant)
       minSpeed: options.minSpeed || 55,               // Pixels per second (dynamic, fluid fall)
       maxSpeed: options.maxSpeed || 135,              // Pixels per second
       fastSpeed: options.fastSpeed || 210,            // Fast highlight streams
-      slotHeight: options.slotHeight || 20,           // Vertical spacing between items
+      slotHeight: options.slotHeight || 22,           // Vertical spacing between items
       fontSize: options.fontSize || 12,               // Clean, legible typography
       tokenRatio: options.tokenRatio || 0.45,         // 45% of items are full DevOps words
       ...options
@@ -71,26 +71,39 @@ export class DevopsRain {
   handleResize() {
     if (!this.canvas) return;
 
-    this.width = this.canvas.width = window.innerWidth;
-    this.height = this.canvas.height = window.innerHeight;
+    // Retina / High-DPI support: render at device pixel ratio to eliminate blurriness
+    const dpr = typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 2) : 1;
+    this.width = window.innerWidth;
+    this.height = window.innerHeight;
+
+    this.canvas.width = Math.floor(this.width * dpr);
+    this.canvas.height = Math.floor(this.height * dpr);
+    this.canvas.style.width = `${this.width}px`;
+    this.canvas.style.height = `${this.height}px`;
+
+    if (this.ctx) {
+      this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      this.ctx.textRendering = 'geometricPrecision';
+    }
 
     const isMobile = this.width < 768;
-    const spacing = isMobile ? 30 : this.config.columnSpacing;
+    const spacing = isMobile ? 55 : this.config.columnSpacing;
     const colCount = Math.floor(this.width / spacing);
 
     this.columns = [];
 
     for (let i = 0; i < colCount; i++) {
-      // 85% of columns active across screen width
-      const isActive = Math.random() < 0.85;
+      // 52% sparse distribution across screen width (clean, breathable density)
+      const isActive = Math.random() < 0.52;
       if (!isActive) continue;
 
-      const isFast = Math.random() < 0.20; // 20% fast highlight streams
+      const isFast = Math.random() < 0.18; // Fast highlight streams
       const speed = isFast 
         ? this.config.fastSpeed * (0.85 + Math.random() * 0.3)
         : this.config.minSpeed + Math.random() * (this.config.maxSpeed - this.config.minSpeed);
 
-      const streamLength = Math.floor(Math.random() * 12 + 10);
+      // Shorter, cleaner streams (5 to 11 items) for an uncluttered aesthetic
+      const streamLength = Math.floor(Math.random() * 6 + 5);
       const items = [];
 
       for (let j = 0; j < streamLength; j++) {
@@ -192,8 +205,8 @@ export class DevopsRain {
     const height = this.height;
     const slotH = this.config.slotHeight;
 
-    // Atmospheric dark dissolution veil
-    ctx.fillStyle = 'rgba(2, 4, 10, 0.14)';
+    // Atmospheric dark dissolution veil (cleaner fade prevents blurry smearing)
+    ctx.fillStyle = 'rgba(2, 4, 10, 0.30)';
     ctx.fillRect(0, 0, width, height);
 
     ctx.font = `600 ${this.config.fontSize}px "JetBrains Mono", "Fira Code", monospace`;
@@ -230,14 +243,14 @@ export class DevopsRain {
         const alpha = Math.max(0.12, progress * col.alphaBase);
 
         if (isHead) {
-          // Luminous leading item with glowing cyan edge
+          // Sharp luminous leading item with subtle, non-blurry neon glow
           ctx.fillStyle = col.isFast ? '#FFFFFF' : '#E0F8FF';
           ctx.shadowColor = '#38bdf8';
-          ctx.shadowBlur = col.isFast ? 12 : 7;
+          ctx.shadowBlur = col.isFast ? 4 : 2;
           ctx.fillText(item.text, col.x, itemY);
           ctx.shadowBlur = 0;
         } else {
-          // Trailing DevOps tokens: crisp, readable, and beautifully shaded
+          // Trailing DevOps tokens: razor-sharp, crisp, and beautifully shaded
           const tokenAlpha = item.isToken ? Math.min(0.95, alpha * 1.35) : alpha;
           ctx.fillStyle = `rgba(${item.colorRgb}, ${tokenAlpha.toFixed(3)})`;
           ctx.fillText(item.text, col.x, itemY);
@@ -248,12 +261,12 @@ export class DevopsRain {
       const tailY = col.y - (totalItems * slotH);
       if (tailY > height + 40) {
         col.y = -Math.random() * 180 - 20;
-        col.isFast = Math.random() < 0.20;
+        col.isFast = Math.random() < 0.18;
         col.speed = col.isFast 
           ? this.config.fastSpeed * (0.85 + Math.random() * 0.3)
           : this.config.minSpeed + Math.random() * (this.config.maxSpeed - this.config.minSpeed);
 
-        // Regenerate items with fresh DevOps terms on reset
+        // Regenerate items with fresh DevOps terms on reset (keep stream short and crisp)
         col.items.forEach(item => {
           item.isToken = Math.random() < this.config.tokenRatio;
           item.text = item.isToken 
