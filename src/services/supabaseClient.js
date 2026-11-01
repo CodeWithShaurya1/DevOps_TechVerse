@@ -36,6 +36,7 @@ class SupabaseService {
   constructor() {
     this.client = null;
     this.isCloudConnected = false;
+    this.ADMIN_PASSPHRASE = ADMIN_PASSPHRASE;
     this._initClient();
     this._initLocalStore();
   }
@@ -123,11 +124,13 @@ class SupabaseService {
     // Check Cloud Supabase final_scores table first
     if (this.isCloudConnected) {
       try {
-        const { data: existing, error: selectErr } = await this.client
+        const { data: existingRows, error: selectErr } = await this.client
           .from('final_scores')
           .select('*')
           .eq('enrollment_number', normalizedEnroll)
-          .maybeSingle();
+          .limit(1);
+
+        const existing = existingRows && existingRows.length > 0 ? existingRows[0] : null;
 
         if (!selectErr && existing) {
           const resolvedName = (normalizedName && normalizedName !== 'OPERATOR') ? normalizedName : existing.full_name;
@@ -327,28 +330,27 @@ class SupabaseService {
     // 4. Check cloud final_scores table
     if (this.isCloudConnected) {
       try {
-        const { data } = await this.client
+        const { data: nameRows } = await this.client
           .from('final_scores')
           .select('full_name')
           .eq('enrollment_number', enroll)
-          .maybeSingle();
-        if (data && data.full_name && data.full_name !== 'OPERATOR') {
-          return this.normalizeName(data.full_name);
+          .limit(1);
+        if (nameRows && nameRows.length > 0 && nameRows[0].full_name && nameRows[0].full_name !== 'OPERATOR') {
+          return this.normalizeName(nameRows[0].full_name);
         }
       } catch (_) {}
 
       // 5. Check game tables for any existing round where full_name was saved
       try {
         for (const t of ['game1_scores', 'game2_scores', 'game3_scores']) {
-          const { data } = await this.client
+          const { data: gameRows } = await this.client
             .from(t)
             .select('full_name')
             .eq('enrollment_number', enroll)
             .neq('full_name', 'OPERATOR')
-            .limit(1)
-            .maybeSingle();
-          if (data && data.full_name && data.full_name !== 'OPERATOR') {
-            return this.normalizeName(data.full_name);
+            .limit(1);
+          if (gameRows && gameRows.length > 0 && gameRows[0].full_name && gameRows[0].full_name !== 'OPERATOR') {
+            return this.normalizeName(gameRows[0].full_name);
           }
         }
       } catch (_) {}
@@ -674,14 +676,14 @@ class SupabaseService {
       try {
         // Protect against overwriting existing non-OPERATOR name with 'OPERATOR'
         if (!resolvedName || resolvedName === 'OPERATOR') {
-          const { data: existing } = await this.client
+          const { data: existingRows } = await this.client
             .from('final_scores')
             .select('full_name')
             .eq('enrollment_number', enroll)
-            .maybeSingle();
-          if (existing && existing.full_name && existing.full_name !== 'OPERATOR') {
-            resolvedName = existing.full_name;
-            finalRecord.full_name = existing.full_name;
+            .limit(1);
+          if (existingRows && existingRows.length > 0 && existingRows[0].full_name && existingRows[0].full_name !== 'OPERATOR') {
+            resolvedName = existingRows[0].full_name;
+            finalRecord.full_name = existingRows[0].full_name;
           }
         }
 
@@ -925,10 +927,12 @@ class SupabaseService {
       const bTotal = Number(b.total_raw_score !== undefined ? b.total_raw_score : ((b.round_1_score || 0) + (b.round_2_score || 0) + (b.round_3_score || 0)));
       if (aTotal !== bTotal) return bTotal - aTotal;
 
-      // Priority 2: Total Completion Time (ascending - less time is better)
+      // Priority 2: Total Completion Time (ascending - less time is better; positive time prioritized over missing 0)
       const aTime = Number(a.total_completion_time_ms || 0);
       const bTime = Number(b.total_completion_time_ms || 0);
-      if (aTime !== bTime) return aTime - bTime;
+      if (aTime > 0 && bTime > 0 && aTime !== bTime) return aTime - bTime;
+      if (aTime === 0 && bTime > 0) return 1;
+      if (bTime === 0 && aTime > 0) return -1;
 
       // Priority 3: Max Streak / Combined Streak for conflict resolution (descending)
       const aStreak = Number(a.combined_streak || 0);

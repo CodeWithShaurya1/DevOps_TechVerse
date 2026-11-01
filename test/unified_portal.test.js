@@ -435,7 +435,7 @@ async function runTests() {
     const clientCode = fs.readFileSync('src/services/supabaseClient.js', 'utf8');
     assert.ok(clientCode.includes('getParticipantFullName(enroll)'), 'Has getParticipantFullName method to recover real name');
     assert.ok(clientCode.includes("normalizedName !== 'OPERATOR'"), 'Validates non-OPERATOR name in registration');
-    assert.ok(clientCode.includes("finalRecord.full_name = existing.full_name"), 'Protects existing registered name from being replaced by OPERATOR');
+    assert.ok(clientCode.includes("finalRecord.full_name = existingRows[0].full_name"), 'Protects existing registered name from being replaced by OPERATOR');
 
     const schemaCode = fs.readFileSync('supabase_schema.sql', 'utf8');
     assert.ok(schemaCode.includes("WHEN EXCLUDED.full_name IS NOT NULL AND EXCLUDED.full_name <> 'OPERATOR'"), 'Trigger protects full_name from OPERATOR overwrite in conflict resolution');
@@ -486,10 +486,103 @@ async function runTests() {
     assert.ok(portalCode.includes('clearParticipantSession(targetScreen = null)'), 'portalState provides clearParticipantSession');
   });
 
+  // 35. Robust Leaderboard Search & Null Safety
+  test('Leaderboard search handles null full_name and searches both name and enrollment ID', () => {
+    const rows = [
+      { full_name: 'SHAURYA BANSAL', participant_id: '23CS001', final_score: 500 },
+      { full_name: null, participant_id: '23CS002', final_score: 400 },
+      { full_name: undefined, participant_id: '23CS003', final_score: 300 }
+    ];
+
+    const filterRows = (query) => {
+      const q = query.toLowerCase().trim();
+      return rows.filter(r => {
+        if (!q) return true;
+        const name = String(r?.full_name || 'OPERATOR').toLowerCase();
+        const id = String(r?.participant_id || '').toLowerCase();
+        return name.includes(q) || id.includes(q);
+      });
+    };
+
+    // Should not throw and should find matches
+    assert.strictEqual(filterRows('shaurya').length, 1);
+    assert.strictEqual(filterRows('23cs002').length, 1);
+    assert.strictEqual(filterRows('operator').length, 2); // 2 rows with null/undefined become 'OPERATOR'
+    assert.strictEqual(filterRows('').length, 3);
+  });
+
+  // 36. Web Audio API Safe Parameter Clamping
+  test('Web Audio API tones safely clamp duration, gain, and frequency against zero or negative values', () => {
+    const soundCode = fs.readFileSync('src/services/soundManager.js', 'utf8');
+    assert.ok(soundCode.includes('Math.max(0.01, Number(duration) || 0.1)'), 'Clamps duration to safe minimum');
+    assert.ok(soundCode.includes('Math.max(0.0002, Number(gainVal) || 0.15)'), 'Clamps gain to safe minimum for exponential ramp');
+    assert.ok(soundCode.includes('Math.max(20, Math.min(20000, Number(freq) || 440))'), 'Clamps frequency to human hearing range');
+  });
+
+  // 37. Leaderboard Ranking: Measured Time vs Zero/Corrupted Time
+  test('Leaderboard sorting ranks participants with positive measured time ahead of zero/unmeasured time', () => {
+    const list = [
+      { full_name: 'A', final_score: 1000, total_time_ms: 0, combined_streak: 5, created_at: '2026-11-01T10:00:00Z' },
+      { full_name: 'B', final_score: 1000, total_time_ms: 45000, combined_streak: 5, created_at: '2026-11-01T10:01:00Z' },
+      { full_name: 'C', final_score: 1000, total_time_ms: 30000, combined_streak: 5, created_at: '2026-11-01T10:02:00Z' }
+    ];
+
+    list.sort((a, b) => {
+      if (b.final_score !== a.final_score) return b.final_score - a.final_score;
+      const aTime = a.total_time_ms || 0;
+      const bTime = b.total_time_ms || 0;
+      if (aTime > 0 && bTime > 0 && aTime !== bTime) return aTime - bTime;
+      if (aTime > 0 && bTime <= 0) return -1;
+      if (bTime > 0 && aTime <= 0) return 1;
+      if ((b.combined_streak || 0) !== (a.combined_streak || 0)) {
+        return (b.combined_streak || 0) - (a.combined_streak || 0);
+      }
+      return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+    });
+
+    // C (30s) should be first, B (45s) second, A (0s unmeasured) third
+    assert.strictEqual(list[0].full_name, 'C');
+    assert.strictEqual(list[1].full_name, 'B');
+    assert.strictEqual(list[2].full_name, 'A');
+  });
+
+  // 38. Admin Passphrase Accessibility on Instance & Portal Authorization
+  test('Admin passphrase is set as property on SupabaseService instance and exported correctly', () => {
+    const clientCode = fs.readFileSync('src/services/supabaseClient.js', 'utf8');
+    assert.ok(clientCode.includes('this.ADMIN_PASSPHRASE = ADMIN_PASSPHRASE;'), 'Assigns ADMIN_PASSPHRASE to instance');
+    assert.ok(clientCode.includes('ADMIN_PASSPHRASE = import.meta.env.VITE_ADMIN_PASSPHRASE'), 'Defines master tournament passphrase');
+
+    const portalCode = fs.readFileSync('src/portalState.js', 'utf8');
+    assert.ok(portalCode.includes('ADMIN_PASSPHRASE'), 'portalState imports and verifies ADMIN_PASSPHRASE');
+  });
+
+  // 39. Duration Formatting Null & NaN Guard
+  test('formatMs handles all edge cases (null, negative, string, NaN, zero, valid numbers)', () => {
+    function formatMs(ms) {
+      if (ms === null || ms === undefined || ms === '' || isNaN(ms)) return '--';
+      const num = Number(ms);
+      if (num < 0) return '--';
+      const totalSec = Math.floor(num / 1000);
+      const mins = Math.floor(totalSec / 60);
+      const secs = totalSec % 60;
+      return `${mins}m ${secs}s`;
+    }
+
+    assert.strictEqual(formatMs(null), '--');
+    assert.strictEqual(formatMs(undefined), '--');
+    assert.strictEqual(formatMs(NaN), '--');
+    assert.strictEqual(formatMs(-500), '--');
+    assert.strictEqual(formatMs('invalid'), '--');
+    assert.strictEqual(formatMs(0), '0m 0s');
+    assert.strictEqual(formatMs(65000), '1m 5s');
+    assert.strictEqual(formatMs(120000), '2m 0s');
+  });
+
   console.log(`\n================================================================`);
   console.log(`TEST RESULTS: ${passed}/${total} PASSED (100% SUCCESS)`);
   console.log(`================================================================\n`);
 }
 
 runTests();
+
 

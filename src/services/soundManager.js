@@ -28,16 +28,19 @@ class PortalSoundManager {
     this.init();
     if (!this.ctx) return;
     try {
+      const safeDuration = Math.max(0.01, Number(duration) || 0.1);
+      const safeGain = Math.max(0.0002, Number(gainVal) || 0.15);
+      const safeFreq = Math.max(20, Math.min(20000, Number(freq) || 440));
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = type;
-      osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-      gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+      osc.frequency.setValueAtTime(safeFreq, this.ctx.currentTime);
+      gain.gain.setValueAtTime(safeGain, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + safeDuration);
       osc.connect(gain);
       gain.connect(this.ctx.destination);
       osc.start();
-      osc.stop(this.ctx.currentTime + duration);
+      osc.stop(this.ctx.currentTime + safeDuration);
     } catch (_) {}
   }
 

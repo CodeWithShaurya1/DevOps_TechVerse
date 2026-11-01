@@ -4,7 +4,7 @@
  * official attempt enforcement, and streak metric calculations.
  */
 
-import { supabaseService } from './services/supabaseClient.js';
+import { supabaseService, ADMIN_PASSPHRASE } from './services/supabaseClient.js';
 import { portalSound } from './services/soundManager.js';
 
 const SESSION_PARTICIPANT_KEY = 'techverse_session_participant';
@@ -113,7 +113,7 @@ class PortalStateManager {
     // Registered participant
     if (this.hasStartedOfficialPlay()) {
       // Enforce Admin Key to prevent cheating/identity tampering mid-tournament
-      if (!adminPassphrase || adminPassphrase.trim() !== supabaseService.ADMIN_PASSPHRASE) {
+      if (!adminPassphrase || adminPassphrase.trim() !== ADMIN_PASSPHRASE) {
         throw new Error('Official tournament records are locked. Identity modification during active challenge requires valid Admin Passphrase.');
       }
     }
@@ -269,7 +269,8 @@ class PortalStateManager {
     streak = 0,
     completionStatus = 'completed',
     successfulActions = 0,
-    totalActions = 0
+    totalActions = 0,
+    durationMs = null
   }) {
     if (!this.participant) return;
 
@@ -279,7 +280,14 @@ class PortalStateManager {
     if (!startTime && typeof sessionStorage !== 'undefined') {
       startTime = Number(sessionStorage.getItem(key));
     }
-    const completionTimeMs = startTime ? Math.max(1000, Date.now() - startTime) : 45000;
+    
+    // Prefer reported game duration if valid (> 0), else calculate from round start time
+    let completionTimeMs = 45000;
+    if (durationMs !== null && durationMs !== undefined && !isNaN(durationMs) && Number(durationMs) > 0) {
+      completionTimeMs = Math.round(Number(durationMs));
+    } else if (startTime) {
+      completionTimeMs = Math.max(1000, Date.now() - startTime);
+    }
 
     // Clear saved start key for this round
     if (typeof sessionStorage !== 'undefined') {
@@ -381,8 +389,10 @@ class PortalStateManager {
   }
 
   formatMs(ms) {
-    if (ms === null || ms === undefined) return '--';
-    const totalSeconds = ms / 1000;
+    if (ms === null || ms === undefined || ms === '') return '--';
+    const num = Number(ms);
+    if (isNaN(num) || num < 0) return '--';
+    const totalSeconds = num / 1000;
     const mins = Math.floor(totalSeconds / 60);
     const secs = (totalSeconds % 60).toFixed(1);
     if (mins > 0) {

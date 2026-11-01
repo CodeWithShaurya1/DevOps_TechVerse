@@ -143,9 +143,12 @@ export class LeaderboardScreen {
       return;
     }
 
-    const filtered = this.rows.filter(r => 
-      !this.searchQuery || r.full_name.toLowerCase().includes(this.searchQuery)
-    );
+    const filtered = this.rows.filter(r => {
+      if (!this.searchQuery) return true;
+      const name = String(r?.full_name || 'OPERATOR').toLowerCase();
+      const id = String(r?.participant_id || '').toLowerCase();
+      return name.includes(this.searchQuery) || id.includes(this.searchQuery);
+    });
 
     if (filtered.length === 0) {
       wrapper.innerHTML = `

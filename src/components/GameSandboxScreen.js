@@ -160,18 +160,23 @@ export class GameSandboxScreen {
         portalSound.playSuccess();
 
         // Submit to Supabase through portal state
-        await portalState.submitRoundResult(this.roundNumber, {
+        const submitRes = await portalState.submitRoundResult(this.roundNumber, {
           gameName: data.gameName || this.info.name,
           score: data.score,
           maximumScore: this.roundNumber === 1 ? 30000 : (this.roundNumber === 2 ? 150 : 350),
           streak: data.streak || 0,
           completionStatus: data.status || 'completed',
           successfulActions: data.podsSaved || data.actions || 0,
-          totalActions: data.totalActions || data.actions || 0
+          totalActions: data.totalActions || data.actions || 0,
+          durationMs: data.durationMs || data.duration_ms || data.timeMs || data.completion_time_ms
         });
 
-        // Display completion debriefing
-        this.showDebriefing(data);
+        // Display completion debriefing with duration fallback if needed
+        const displayData = {
+          ...data,
+          durationMs: (data.durationMs ?? submitRes?.record?.completion_time_ms)
+        };
+        this.showDebriefing(displayData);
       } else if (data.type === 'TECHVERSE_ADVANCE_ROUND') {
         const next = data.nextRound || (this.roundNumber + 1);
         if (next <= 3) {
