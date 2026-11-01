@@ -18,6 +18,7 @@ class PortalStateManager {
     this.roundResults = { 1: null, 2: null, 3: null };
     this.isOfficialRound = { 1: true, 2: true, 3: true };
     this.activeRoundStartTime = null;
+    this.isReplaySessionActive = false;
     this.listeners = new Set();
 
     this._restoreSession();
@@ -29,6 +30,17 @@ class PortalStateManager {
       const saved = sessionStorage.getItem(SESSION_PARTICIPANT_KEY);
       if (saved) {
         this.participant = JSON.parse(saved);
+        const enroll = this.participant.enrollment_number_normalized || this.participant.enrollment || this.participant.id;
+        const replay = sessionStorage.getItem('techverse_active_replay_session');
+        if (replay) {
+          try {
+            const parsed = JSON.parse(replay);
+            if (parsed && (parsed.enrollmentNumber === enroll || parsed.enrollment === enroll)) {
+              this.isReplaySessionActive = true;
+              this.isOfficialRound = { 1: false, 2: false, 3: false };
+            }
+          } catch (_) {}
+        }
         this._fetchOfficialResults();
       }
     } catch (_) {}
@@ -129,11 +141,27 @@ class PortalStateManager {
     this.notify();
   }
 
+  activateReplaySession() {
+    this.isReplaySessionActive = true;
+    this.isOfficialRound = { 1: false, 2: false, 3: false };
+    if (typeof sessionStorage !== 'undefined') {
+      [1, 2, 3].forEach(r => {
+        sessionStorage.setItem(SESSION_OFFICIAL_ATTEMPT_PREFIX + r, 'false');
+      });
+    }
+    this.notify();
+  }
+
   clearParticipant() {
+    if (this.participant) {
+      supabaseService.endReplaySession(this.participant.id);
+    }
     this.participant = null;
     this.roundResults = { 1: null, 2: null, 3: null };
+    this.isReplaySessionActive = false;
     if (typeof sessionStorage !== 'undefined') {
       sessionStorage.removeItem(SESSION_PARTICIPANT_KEY);
+      sessionStorage.removeItem('techverse_active_replay_session');
       [1, 2, 3].forEach(r => {
         sessionStorage.removeItem(SESSION_ROUND_START_PREFIX + r);
         sessionStorage.removeItem(SESSION_OFFICIAL_ATTEMPT_PREFIX + r);
@@ -143,11 +171,16 @@ class PortalStateManager {
   }
 
   resetForNextParticipant() {
+    if (this.participant) {
+      supabaseService.endReplaySession(this.participant.id);
+    }
     this.participant = null;
     this.roundResults = { 1: null, 2: null, 3: null };
     this.activeRoundStartTime = null;
+    this.isReplaySessionActive = false;
     if (typeof sessionStorage !== 'undefined') {
       sessionStorage.removeItem(SESSION_PARTICIPANT_KEY);
+      sessionStorage.removeItem('techverse_active_replay_session');
       [1, 2, 3].forEach(r => {
         sessionStorage.removeItem(SESSION_ROUND_START_PREFIX + r);
         sessionStorage.removeItem(SESSION_OFFICIAL_ATTEMPT_PREFIX + r);
@@ -173,6 +206,18 @@ class PortalStateManager {
       return { allowed: false, reason: 'unregistered' };
     }
 
+    // Continuous replay session active: unlock all rounds without prompting for key again!
+    if (this.isReplaySessionActive) {
+      this.isOfficialRound[roundNumber] = false;
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem(
+          SESSION_OFFICIAL_ATTEMPT_PREFIX + roundNumber,
+          'false'
+        );
+      }
+      return { allowed: true, isOfficial: false };
+    }
+
     // Check if official attempt is locked
     const lockCheck = await supabaseService.checkRoundLocked(this.participant.id, roundNumber);
 
@@ -186,6 +231,9 @@ class PortalStateManager {
 
     // Set whether this attempt is official or practice
     const isPractice = lockCheck.hasReplayAuthorization;
+    if (isPractice) {
+      this.activateReplaySession();
+    }
     this.isOfficialRound[roundNumber] = !isPractice;
 
     if (typeof sessionStorage !== 'undefined') {

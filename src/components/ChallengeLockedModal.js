@@ -49,7 +49,7 @@ export class ChallengeLockedModal {
         </div>
 
         <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.2rem;">
-          Contact the event administrator if you need an authorized practice replay.
+          Enter the Administrator Key once to unlock all three rounds for this continuous replay session.
           Practice replays do not overwrite official results.
         </p>
 
@@ -73,7 +73,7 @@ export class ChallengeLockedModal {
               VIEW LEADERBOARD
             </button>
             <button type="submit" id="btn-grant-replay" class="btn-cyber btn-primary-cyan" style="flex: 1; justify-content: center;">
-              AUTHORIZE REPLAY ⚡
+              AUTHORIZE REPLAY SESSION ⚡
             </button>
           </div>
         </form>
@@ -107,12 +107,13 @@ export class ChallengeLockedModal {
       const key = keyInput.value.trim();
       const res = await supabaseService.authorizePracticeReplay(
         portalState.participant.id,
-        this.roundNumber,
+        null, // null = Unlocks all 3 rounds for a continuous replay session!
         key,
-        `Admin authorized replay for Round ${this.roundNumber}`
+        `Admin authorized continuous 3-round replay session`
       );
 
       if (res.success) {
+        portalState.activateReplaySession();
         portalSound.playSuccess();
         modalEl.remove();
         if (this.onReplayAuthorized) this.onReplayAuthorized();

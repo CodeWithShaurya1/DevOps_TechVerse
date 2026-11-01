@@ -440,14 +440,29 @@ class SupabaseService {
     const enroll = this.normalizeEnrollment(participantIdOrEnroll);
     if (!enroll) return false;
 
+    // 1) Fast check for active continuous replay session bound to this participant
+    if (typeof sessionStorage !== 'undefined') {
+      try {
+        const saved = JSON.parse(sessionStorage.getItem('techverse_active_replay_session') || '{}');
+        if (saved && (saved.enrollmentNumber === enroll || saved.enrollment === enroll)) {
+          // Replay session is valid for up to 3 hours
+          if (Date.now() - (saved.authorizedAt || 0) < 3 * 3600 * 1000) {
+            return true;
+          }
+        }
+      } catch (_) {}
+    }
+
+    // 2) Cloud database check in admin_relogin
     if (this.isCloudConnected) {
       try {
         const { data, error } = await this.client
           .from('admin_relogin')
           .select('*')
           .eq('enrollment_number', enroll)
+          .in('action_type', ['replay', 'replay_session'])
+          .in('status', ['pending', 'active'])
           .or(`round_number.eq.${roundNumber},round_number.is.null`)
-          .eq('status', 'pending')
           .limit(1);
 
         if (!error && Array.isArray(data) && data.length > 0) {
@@ -458,11 +473,12 @@ class SupabaseService {
       }
     }
 
+    // 3) Local list fallback check
     const localReplays = this._getLocalList(STORAGE_ADMIN_RELOGIN);
     return localReplays.some(
       r => r.enrollment_number === enroll &&
            (r.round_number === roundNumber || r.round_number === null) &&
-           r.status === 'pending'
+           (r.status === 'pending' || r.status === 'active')
     );
   }
 
@@ -656,22 +672,32 @@ class SupabaseService {
   }
 
   // --- 5. ADMIN RE-LOGIN & REPLAY AUTHORIZATION (Table 5: admin_relogin) ---
-  async authorizePracticeReplay(participantIdOrEnroll, roundNumber, passphrase, reason = 'Administrator practice grant') {
+  async authorizePracticeReplay(participantIdOrEnroll, roundNumber = null, passphrase, reason = 'Administrator practice grant') {
     if (passphrase !== ADMIN_PASSPHRASE) {
       return { success: false, error: 'Invalid Administrator Key. Access Denied.' };
     }
 
     const enroll = this.normalizeEnrollment(participantIdOrEnroll);
+    const sessionId = this.generateUUID();
     const authRecord = {
       id: this.generateUUID(),
       enrollment_number: enroll,
       admin_key: passphrase,
       round_number: roundNumber || null,
-      action_type: 'replay',
-      status: 'pending',
-      reason: reason || 'Authorized Practice Replay',
+      action_type: 'replay_session',
+      status: 'active',
+      reason: reason || 'Continuous 3-Round Authorized Replay Session',
       authorized_at: new Date().toISOString()
     };
+
+    // Bind continuous session to active browser tab
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem('techverse_active_replay_session', JSON.stringify({
+        sessionId,
+        enrollmentNumber: enroll,
+        authorizedAt: Date.now()
+      }));
+    }
 
     if (this.isCloudConnected) {
       try {
@@ -683,7 +709,7 @@ class SupabaseService {
           const list = this._getLocalList(STORAGE_ADMIN_RELOGIN);
           list.push(authRecord);
           this._saveLocalList(STORAGE_ADMIN_RELOGIN, list);
-          return { success: true, cloudSynced: true };
+          return { success: true, cloudSynced: true, sessionId };
         }
       } catch (err) {
         console.warn('[SupabaseService] Cloud admin_relogin insert error:', err);
@@ -693,7 +719,7 @@ class SupabaseService {
     const list = this._getLocalList(STORAGE_ADMIN_RELOGIN);
     list.push(authRecord);
     this._saveLocalList(STORAGE_ADMIN_RELOGIN, list);
-    return { success: true, cloudSynced: false };
+    return { success: true, cloudSynced: false, sessionId };
   }
 
   async authorizeAdminRelogin(participantIdOrEnroll, passphrase, reason = 'Administrator re-login grant') {
@@ -726,7 +752,44 @@ class SupabaseService {
   }
 
   async consumeReplayAuthorization(participantIdOrEnroll, roundNumber) {
+    // Only one-off specific round replay attempts are consumed per round.
+    // Continuous 3-round replay sessions remain active across all rounds until session ends!
     const enroll = this.normalizeEnrollment(participantIdOrEnroll);
+    if (!enroll || !roundNumber) return;
+
+    if (this.isCloudConnected) {
+      try {
+        await this.client
+          .from('admin_relogin')
+          .update({
+            status: 'consumed',
+            consumed_at: new Date().toISOString()
+          })
+          .eq('enrollment_number', enroll)
+          .eq('round_number', roundNumber)
+          .eq('action_type', 'replay')
+          .eq('status', 'pending');
+      } catch (_) {}
+    }
+
+    const list = this._getLocalList(STORAGE_ADMIN_RELOGIN);
+    list.forEach(r => {
+      if (r.enrollment_number === enroll &&
+         r.round_number === roundNumber &&
+         r.action_type === 'replay' &&
+         r.status === 'pending') {
+        r.status = 'consumed';
+        r.consumed_at = new Date().toISOString();
+      }
+    });
+    this._saveLocalList(STORAGE_ADMIN_RELOGIN, list);
+  }
+
+  async endReplaySession(participantIdOrEnroll) {
+    const enroll = this.normalizeEnrollment(participantIdOrEnroll);
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem('techverse_active_replay_session');
+    }
     if (!enroll) return;
 
     if (this.isCloudConnected) {
@@ -738,16 +801,13 @@ class SupabaseService {
             consumed_at: new Date().toISOString()
           })
           .eq('enrollment_number', enroll)
-          .or(`round_number.eq.${roundNumber},round_number.is.null`)
-          .eq('status', 'pending');
+          .in('status', ['pending', 'active']);
       } catch (_) {}
     }
 
     const list = this._getLocalList(STORAGE_ADMIN_RELOGIN);
     list.forEach(r => {
-      if (r.enrollment_number === enroll &&
-         (r.round_number === roundNumber || r.round_number === null) &&
-         r.status === 'pending') {
+      if (r.enrollment_number === enroll && (r.status === 'pending' || r.status === 'active')) {
         r.status = 'consumed';
         r.consumed_at = new Date().toISOString();
       }

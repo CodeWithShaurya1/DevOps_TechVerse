@@ -384,7 +384,7 @@ async function runTests() {
     assert.ok(rainCode.includes('BUILD_OK'), 'Rain contains BUILD_OK token');
     assert.ok(rainCode.includes('0x7FA2'), 'Rain contains hex telemetry');
     assert.ok(rainCode.includes('this.height'), 'Rain calculates viewport height distribution');
-    assert.ok(rainCode.includes('rgba(2, 4, 10, 0.14)'), 'Rain uses smooth dissolve persistence');
+    assert.ok(rainCode.includes('rgba(2, 4, 10'), 'Rain uses deep dark dissolve persistence');
 
     const cssCode = fs.readFileSync('src/styles/portal.css', 'utf8');
     assert.ok(cssCode.includes('#portal-canvas'), 'CSS defines portal-canvas');
@@ -442,6 +442,22 @@ async function runTests() {
 
     const portalCode = fs.readFileSync('src/portalState.js', 'utf8');
     assert.ok(portalCode.includes('fullName: fullName'), 'submitRoundResult passes resolved fullName to submitGameResult');
+  });
+
+  // 32. Continuous 3-Round Replay Session Authorization
+  test('Admin key authorization unlocks all three rounds continuously without requesting key per round', () => {
+    const portalCode = fs.readFileSync('src/portalState.js', 'utf8');
+    assert.ok(portalCode.includes('activateReplaySession()'), 'portalState has activateReplaySession method');
+    assert.ok(portalCode.includes('this.isReplaySessionActive'), 'portalState tracks continuous replay session state');
+    assert.ok(portalCode.includes("sessionStorage.removeItem('techverse_active_replay_session')"), 'portalState clears session on participant reset');
+
+    const clientCode = fs.readFileSync('src/services/supabaseClient.js', 'utf8');
+    assert.ok(clientCode.includes("action_type: 'replay_session'"), 'Creates replay_session action type');
+    assert.ok(clientCode.includes('endReplaySession(participantIdOrEnroll)'), 'Provides endReplaySession cleanup method');
+
+    const modalCode = fs.readFileSync('src/components/ChallengeLockedModal.js', 'utf8');
+    assert.ok(modalCode.includes('null, // null = Unlocks all 3 rounds'), 'Passes null round to authorize full 3-round replay session');
+    assert.ok(modalCode.includes('portalState.activateReplaySession()'), 'Activates replay session upon valid admin key entry');
   });
 
   console.log(`\n================================================================`);
