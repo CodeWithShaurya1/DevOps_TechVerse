@@ -471,6 +471,21 @@ async function runTests() {
     assert.ok(clientCode.includes("fetchRound = async (tableName, roundNum, defaultGameName)"), 'Uses safe query with fallback to prevent dropped scores');
   });
 
+  // 34. Automatic Credential Removal After Playing
+  test('Previous user credentials are automatically cleared when starting terminal after playing games', () => {
+    const introCode = fs.readFileSync('src/components/CinematicIntro.js', 'utf8');
+    assert.ok(introCode.includes('clearParticipantSession'), 'CinematicIntro calls clearParticipantSession if games were played');
+
+    const regCode = fs.readFileSync('src/components/RegistrationScreen.js', 'utf8');
+    assert.ok(regCode.includes('clearParticipantSession'), 'RegistrationScreen clears credentials if previous user played');
+
+    const finalCode = fs.readFileSync('src/components/FinalResultsScreen.js', 'utf8');
+    assert.ok(finalCode.includes("clearParticipantSession('cinematic_intro')"), 'FinalResultsScreen clears credentials when returning to intro');
+
+    const portalCode = fs.readFileSync('src/portalState.js', 'utf8');
+    assert.ok(portalCode.includes('clearParticipantSession(targetScreen = null)'), 'portalState provides clearParticipantSession');
+  });
+
   console.log(`\n================================================================`);
   console.log(`TEST RESULTS: ${passed}/${total} PASSED (100% SUCCESS)`);
   console.log(`================================================================\n`);

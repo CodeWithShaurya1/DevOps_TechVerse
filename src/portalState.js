@@ -162,25 +162,7 @@ class PortalStateManager {
     this.notify();
   }
 
-  clearParticipant() {
-    if (this.participant) {
-      supabaseService.endReplaySession(this.participant.id);
-    }
-    this.participant = null;
-    this.roundResults = { 1: null, 2: null, 3: null };
-    this.isReplaySessionActive = false;
-    if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.removeItem(SESSION_PARTICIPANT_KEY);
-      sessionStorage.removeItem('techverse_active_replay_session');
-      [1, 2, 3].forEach(r => {
-        sessionStorage.removeItem(SESSION_ROUND_START_PREFIX + r);
-        sessionStorage.removeItem(SESSION_OFFICIAL_ATTEMPT_PREFIX + r);
-      });
-    }
-    this.goToScreen('cinematic_intro');
-  }
-
-  resetForNextParticipant() {
+  clearParticipantSession(targetScreen = null) {
     if (this.participant) {
       supabaseService.endReplaySession(this.participant.id);
     }
@@ -188,6 +170,7 @@ class PortalStateManager {
     this.roundResults = { 1: null, 2: null, 3: null };
     this.activeRoundStartTime = null;
     this.isReplaySessionActive = false;
+    this.isOfficialRound = { 1: true, 2: true, 3: true };
     if (typeof sessionStorage !== 'undefined') {
       sessionStorage.removeItem(SESSION_PARTICIPANT_KEY);
       sessionStorage.removeItem('techverse_active_replay_session');
@@ -200,7 +183,19 @@ class PortalStateManager {
       localStorage.removeItem('techverse_preferred_enrollment');
       localStorage.removeItem('techverse_preferred_operator');
     }
-    this.goToScreen('registration');
+    if (targetScreen) {
+      this.goToScreen(targetScreen);
+    } else {
+      this.notify();
+    }
+  }
+
+  clearParticipant() {
+    this.clearParticipantSession('cinematic_intro');
+  }
+
+  resetForNextParticipant() {
+    this.clearParticipantSession('registration');
   }
 
   goToScreen(screenName) {

@@ -155,7 +155,8 @@ export class FinalResultsScreen {
     }
 
     container.querySelector('#res-btn-home')?.addEventListener('click', () => {
-      portalState.goToScreen('cinematic_intro');
+      // Once game is completed, automatically clear credentials for the next competitor
+      portalState.clearParticipantSession('cinematic_intro');
     });
 
     container.querySelector('#res-btn-next-operator')?.addEventListener('click', () => {

@@ -127,6 +127,11 @@ export class CinematicIntro {
     portalSound.playIntroBoot();
 
     const proceed = () => {
+      // If previous user already played any games, automatically remove their credentials
+      if (portalState.hasStartedOfficialPlay() || portalState.getEventSummary().completedCount > 0) {
+        portalState.clearParticipantSession('registration');
+        return;
+      }
       portalState.goToScreen('registration');
     };
 

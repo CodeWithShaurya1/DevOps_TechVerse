@@ -12,7 +12,14 @@ import { EventBriefingModal } from './EventBriefingModal.js';
 
 export class RegistrationScreen {
   mount(container) {
-    const existingParticipant = portalState.participant;
+    // If previous user already played any games, wipe credentials so form is completely clean
+    if (portalState.hasStartedOfficialPlay() || portalState.getEventSummary().completedCount > 0) {
+      portalState.clearParticipantSession();
+    }
+
+    const existingParticipant = (portalState.hasStartedOfficialPlay() || portalState.getEventSummary().completedCount > 0)
+      ? null
+      : portalState.participant;
     const initialName = existingParticipant?.full_name || '';
     const initialEnrollment = existingParticipant?.enrollment_number_normalized || '';
 
